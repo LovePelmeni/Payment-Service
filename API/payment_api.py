@@ -3,8 +3,11 @@ from . import exceptions as api_exceptions, settings
 from .settings import application
 import pydantic, stripe, logging, fastapi, datetime
 from fastapi_csrf_protect import CsrfProtect
+from . import routers
 
 logger = logging.getLogger(__name__)
+payment_router = routers.payment_router
+
 
 class PaymentObject(pydantic.BaseModel):
 
@@ -58,10 +61,10 @@ class Payment(object):
 
 
 
-@application.post('create/payment/session/')
-def start_payment_session(request: fastapi.Request, payment_credentials: dict, csrf_protect: CsrfProtect):
+@application.post('/session/', tags=['payment'])
+def start_payment_session(request: fastapi.Request, payment_credentials: dict, ):
     try:
-        csrf_protect.validate_csrf_in_cookies(request=request)
+        # csrf_protect.validate_csrf_in_cookies(request=request)
         assert kwargs['currency'] in ('usd', 'rub', 'eur')
         session = stripe.checkout.Session.create(api_key=getattr(settings, 'STRIPE_API_KEY'),
 
@@ -76,9 +79,9 @@ def start_payment_session(request: fastapi.Request, payment_credentials: dict, c
             id=request.query_params.get('customer_id')).stripe_customer_id
             }],
         metadata={
-            "subscription_id": kwargs.get('subscription_id'),
-            "subscription_name": kwargs.get('subscription_name'),
-            "purchaser": kwargs.get('purchaser'),
+            "subscription_id": request.session.get('subscription_id'),
+            "subscription_name": request.session.get('subscription_name'),
+            "purchaser": request.session.get('purchaser'),
             "date": datetime.datetime.now(),
         },
         mode = "payment",
@@ -90,10 +93,10 @@ def start_payment_session(request: fastapi.Request, payment_credentials: dict, c
         raise api_exceptions.PaymentSessionFailed(reason=exception.args)
 
 
-@application.post('get/payment/intent/{customer_id}/')
-def get_payment_intent(customer_id, **kwargs):
+@application.post('/intent/{customer_id}/', tags=['payment'])
+def get_payment_intent(customer_id: str, payment_credentials: dict):
     try:
-        payment = Payment(payment_object=PaymentObject(**kwargs),
+        payment = Payment(payment_object=PaymentObject(**payment_credentials),
         customer=stripe.Customer.retrieve(id=customer_id, api_key=getattr(settings, 'STRIPE_API_KEY')))
         intent_secret = payment.get_intent().get('intent_id')
         return fastapi.responses.JSONResponse({'intent_id': intent_secret}, status_code=200)

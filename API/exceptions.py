@@ -43,3 +43,7 @@ class UserNotFound(BaseException):
     def __call__(self, **kwargs):
         return fastapi.HTTPException(status_code=404)
 
+class UserDeletionFailed(BaseException):
+
+    def __init__(self, reason):
+        self.reason = reason

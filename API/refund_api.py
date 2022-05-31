@@ -2,8 +2,11 @@ import ormar.exceptions
 from . import settings, models
 import stripe, logging, fastapi
 from . import exceptions as api_exceptions
+from .settings import application
+from . import routers
 
 logger = logging.getLogger(__name__)
+refund_router = routers.refund_router
 
 class Refund(object):
 
@@ -46,7 +49,7 @@ class Refund(object):
                 reason=getattr(exception, 'reason')
             )
 
-@application.post('refund/payment/{payment_id}/')
+@application.post('payment/{payment_id}/', tags=['refund'])
 def make_refund(payment_secret):
     try:
         refund = Refund(payment_secret=payment_secret).create()
@@ -57,3 +60,8 @@ def make_refund(payment_secret):
         )
     except(api_exceptions.RefundFailed,) as exception:
         raise exception
+
+
+
+
+

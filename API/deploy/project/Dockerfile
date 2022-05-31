@@ -6,4 +6,4 @@ COPY ./requirements.txt ./production_requirements.txt
 RUN pip install -r production_requirements.txt
 COPY . .
 
-
+ENTRYPOINT ["sh", "./entrypoint.sh"]

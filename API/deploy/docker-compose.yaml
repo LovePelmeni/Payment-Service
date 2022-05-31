@@ -16,16 +16,38 @@ services:
   payment_app:
     container_name: payment_app
     build: .
-    command: uvicorn API.settings:application --host 0.0.0.0 --port 85
     env_file:
       - ./project/payment_application.env
+    environment:
+      - DATABASE_URL=psql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
     ports:
       - "8081:8081"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://0.0.0.0:8081/healthcheck/"]
+      retries: 5
+      interval: 10s
+      timeout: 5s
+    depends_on:
+      - payment_postgresql_database
     networks:
       - payment_app_network
 
-  mongo_payment_database:
-    container_name: mongo_payment_database
+  payment_postgresql_database:
+    container_name: postgresql_payment_database
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Kirill
+    ports:
+      - "5438:5438"
+    command:
+      - -p 5438
+    healthcheck:
+      test: [""]
+      retries: 5
+      timeout: 10s
+      interval: 15s
     networks:
       - payment_app_network
 
