@@ -4,6 +4,16 @@ class InvalidPaymentCredentials(BaseException):
     def __init__(self, invalid_credentials: dict):
         self.invalid_credentials = invalid_credentials
 
+class PaymentValidationError(BaseException):
+
+    def __init__(self, invalid_credentials=None):
+        self.invalid_credentials = invalid_credentials
+
+class InvalidPaymentResponse(BaseException):
+
+    def __init__(self, invalid_credentials=None):
+        self.invalid_data = invalid_credentials
+
 class PaymentNotFound(BaseException):
 
     def __call__(self, **kwargs):

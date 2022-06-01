@@ -1,18 +1,16 @@
 from __future__ import annotations
 from . import exceptions as api_exceptions, settings
 from .settings import application
-import pydantic, stripe, logging, fastapi, datetime
+import pydantic, stripe.error, logging, fastapi, datetime
 from fastapi_csrf_protect import CsrfProtect
-from . import routers
 
 logger = logging.getLogger(__name__)
-payment_router = routers.payment_router
 
-
-class PaymentObject(pydantic.BaseModel):
+class PaymentValidationForm(pydantic.BaseModel):
 
     subscription_name: str
     subscription_id: int
+
     purchaser_id: int
     amount: int
     currency: typing.Literal["usd", "rub", "eur"]
@@ -20,52 +18,45 @@ class PaymentObject(pydantic.BaseModel):
 
 class Payment(object):
 
-    def __init__(self, payment_object: PaymentObject, customer: stripe.Customer):
+    def __init__(self, payment_object: PaymentValidationForm, customer: stripe.Customer):
         self.payment_object = payment_object.dict()
         self.customer = customer
-
-    def __delete__(self, instance):
-        try:
-            getattr(self, 'payment').cancel(
-            idempotency_key=getattr(self, 'idempotency_key'))
-            logger.debug('payment intent has been canceled.')
-        except(AttributeError,):
-            pass
-        return super().delete(instance)
 
     def check_exists(self):
         try:
             return stripe.PaymentIntent.retrieve(id=self.payment_intent.intent_id,
-            api_key=settings.STRIPE_API_KEY)
-        except(AttributeError):
+            api_key=settings.STRIPE_API_KEY, client_secret=settings.STRIPE_API_SECRET)
+        except(stripe.error.InvalidRequestError,):
             return False
 
     def get_intent(self):
-        intent = stripe.PaymentIntent.create(
-            api_key=settings.STRIPE_API_SECRET,
-            amount=self.payment_object.get('amount'),
+        try:
+            intent = stripe.PaymentIntent.create(
+                api_key=settings.STRIPE_API_KEY,
+                amount=self.payment_object.get('amount'),
 
-            payment_method_types=['card'],
-            currency=self.payment_object.get('currency'),
+                payment_method_types=['card'],
+                currency=self.payment_object.get('currency'),
 
-            customer=self.customer,
-            metadata={
-                'subscription_id': self.payment_object.get('subscription_id'),
-                'subscription_name': self.payment_object.get('subscription_name'),
+                customer=self.customer,
+                metadata={
+                    'subscription_id': self.payment_object.get('subscription_id'),
+                    'subscription_name': self.payment_object.get('subscription_name'),
 
-                'payment_amount': self.payment_object.get('amount'),
-                'purchaser_id': self.payment_object.get('purchaser_id')
-            },
-        )
-        return {'intent_id': intent.get('client_secret')}
+                    'payment_amount': self.payment_object.get('amount'),
+                    'purchaser_id': self.payment_object.get('purchaser_id')
+                },
+            )
+            return {'intent_id': intent.get('client_secret')}
+        except(stripe.error.InvalidRequestError,) as exception:
+            raise exception
 
 
-
-@application.post('/session/', tags=['payment'])
-def start_payment_session(request: fastapi.Request, payment_credentials: dict, ):
+@application.post('/session/')
+def start_payment_session(request: fastapi.Request, payment_credentials: dict, csrf_protect: CsrfProtect):
     try:
-        # csrf_protect.validate_csrf_in_cookies(request=request)
-        assert kwargs['currency'] in ('usd', 'rub', 'eur')
+        csrf_protect.get_csrf_from_headers(headers=request.headers)
+        assert payment_credentials['currency'] in ('usd', 'rub', 'eur')
         session = stripe.checkout.Session.create(api_key=getattr(settings, 'STRIPE_API_KEY'),
 
         success_url = "http://localhost:8081/payment/succeded/",
@@ -86,22 +77,26 @@ def start_payment_session(request: fastapi.Request, payment_credentials: dict, )
         },
         mode = "payment",
         payment_intent=stripe.PaymentIntent.retrieve(api_key=settings.STRIPE_API_KEY, id=payment_intent_id),
-        after_expiration=None,
-        )
-        return fastapi.responses.JSONResponse({'session_id': session})
-    except(stripe.ErrorObject,) as exception:
+        after_expiration=None)
+        return fastapi.responses.JSONResponse({'session': session})
+
+    except(stripe.error.InvalidRequestError, AssertionError) as exception:
+        logger.debug('[PAYMENT SESSION EXCEPTION]: %s' % exception)
         raise api_exceptions.PaymentSessionFailed(reason=exception.args)
 
 
-@application.post('/intent/{customer_id}/', tags=['payment'])
-def get_payment_intent(customer_id: str, payment_credentials: dict):
+@application.post('/intent/')
+def get_payment_intent(request: fastapi.Request, payment_credentials: dict):
     try:
-        payment = Payment(payment_object=PaymentObject(**payment_credentials),
-        customer=stripe.Customer.retrieve(id=customer_id, api_key=getattr(settings, 'STRIPE_API_KEY')))
+        payment = Payment(payment_object=PaymentValidationForm(**payment_credentials),
+        customer=stripe.Customer.retrieve(id=request.query_params.get('customer_id'),
+        api_key=getattr(settings, 'STRIPE_API_KEY')))
+
         intent_secret = payment.get_intent().get('intent_id')
         return fastapi.responses.JSONResponse({'intent_id': intent_secret}, status_code=200)
 
-    except(pydantic.ValidationError, stripe.ErrorObject):
+    except(pydantic.ValidationError, stripe.error.InvalidRequestError) as exception:
+        logger.error('[PAYMENT INTENT EXCEPTION]: %s' % exception)
         return fastapi.HTTPException(status_code=400, detail='Invalid Credentials.')
 
 

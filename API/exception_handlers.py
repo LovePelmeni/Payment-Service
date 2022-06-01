@@ -29,7 +29,6 @@ def invalid_payment_response_handler(request: fastapi.Request, exception: api_ex
     webhooks.send_payment_status_response(error=reason, status=500)
 
 
-
 @application.exception_handler(exc_class_or_status_code=api_exceptions.PaymentSessionFailed)
 def failed_payment_session_handler(request: fastapi.Request, exception: api_exceptions.PaymentSessionFailed):
     reason = getattr(exception, 'reason')
