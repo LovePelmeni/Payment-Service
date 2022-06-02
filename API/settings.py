@@ -3,9 +3,14 @@ import os
 import databases
 import fastapi, pydantic
 from fastapi_csrf_protect import CsrfProtect
+import logging
 
 
 pydantic.BaseConfig.arbitrary_types_allowed = True
+
+# logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
+logger = logging.getLogger(__name__)
+
 
 DEBUG = True
 
@@ -52,8 +57,8 @@ allow_methods=ALLOWED_METHODS, allow_headers=ALLOWED_HEADERS, allow_credentials=
 database = databases.Database(url=DATABASE_URL)
 application.state.database = database
 
-SUCCESS_SESSION_URL = 'http://%s:8000/healthcheck/'
-CANCEL_SESSION_URL = 'http://%s:8081/healthcheck/'
+SUCCESS_SESSION_URL = 'http://localhost:8000/healthcheck/'
+CANCEL_SESSION_URL = 'http://localhost:8081/healthcheck/'
 
 class CSRFSettings(pydantic.BaseModel):
     secret_key: str = 'payment_secret_key'

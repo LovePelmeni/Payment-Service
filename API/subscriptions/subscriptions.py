@@ -8,7 +8,6 @@ except(ImportError, ModuleNotFoundError):
     import settings
 
 import fastapi, pydantic, requests, stripe.error
-# from API import models, settings
 try:
     from . import products
 except(ImportError, ModuleNotFoundError):
@@ -16,7 +15,6 @@ except(ImportError, ModuleNotFoundError):
 
 import logging
 logger = logging.getLogger(__name__)
-
 
 class SubscriptionValidationModel(pydantic.BaseModel):
 
@@ -27,18 +25,6 @@ class SubscriptionValidationModel(pydantic.BaseModel):
     @pydantic.validator('amount')
     def validate_amount(cls, value):
         return int(value)
-
-async def sub_distributed_transaction(method, url_address, credentials: dict):
-    """
-    / * Sends The Request To the `url_address` parameter to continue the distributed transaction chain.
-    // * Used for creates distributed 'Subscription' objects across bunch of services.
-    """
-    import requests
-    session = requests.Session()
-    response = session.request(method=method, url=url_address,
-    params=credentials, data=credentials, timeout=20)
-    response.raise_for_status()
-
 
 @settings.database.transaction(force_rollback=True)
 @application.post('/subscription/create/')
@@ -71,6 +57,8 @@ async def delete_subscription(request: fastapi.Request):
 
         logger.error('could not delete subscription, error: %s' % exception)
         return fastapi.HTTPException(status_code=500)
+
+
 
 
 

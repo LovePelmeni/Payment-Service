@@ -3,7 +3,9 @@ import fastapi_csrf_protect.exceptions
 from API.settings import application
 import fastapi
 from . import exceptions as api_exceptions
+import logging
 
+logger = logging.getLogger(__name__)
 
 @application.exception_handler(exc_class_or_status_code=fastapi_csrf_protect.exceptions.CsrfProtectError)
 def csrf_exception_handler(request: fastapi.Request, exception: fastapi_csrf_protect.CsrfProtect):
@@ -36,9 +38,10 @@ def failed_payment_session_handler(request: fastapi.Request, exception: api_exce
         status_code=501
     )
 
-
+@application.exception_handler(exc_class_or_status_code=api_exceptions.PaymentSessionFailed)
 def failed_subscription_creation_handler(request: fastapi.Request, exception: api_exceptions.PaymentSessionFailed):
-    pass
+    logger.error('Exception: %s' % exception)
+    return fastapi.responses.Response(status_code=500)
 
 @application.exception_handler(exc_class_or_status_code=api_exceptions.RefundFailed)
 def refund_failed_handler(request: fastapi.Request, exception: api_exceptions.RefundFailed):
@@ -48,3 +51,7 @@ def refund_failed_handler(request: fastapi.Request, exception: api_exceptions.Re
     return fastapi.responses.JSONResponse(
         {'error': reason}, status_code=500
     )
+
+
+
+

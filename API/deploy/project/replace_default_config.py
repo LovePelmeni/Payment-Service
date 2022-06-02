@@ -21,9 +21,9 @@ parser = SafeConfigParser()
 DATABASE_URL = 'postgresql://%s:%s@%s:%s/%s' % (DATABASE_USER, DATABASE_PASSWORD,
 DATABASE_HOST, DATABASE_PORT, DATABASE_NAME)
 
-
 def replace_default_config() -> None:
     env.target_metadata = BaseMetaData.metadata
     parser.set('ALEMBIC', 'sqlalchemy.url', DATABASE_URL)
 
 replace_default_config()
+

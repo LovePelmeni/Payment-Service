@@ -19,7 +19,6 @@ if [-d "$DIR"]; then
     echo "Configuration Replaced.. Testing..."
 fi
 
-
     alembic revision --autogenerate -m "Make Migrations..."
       if [$? -ne 0]; then
       echo "Failed to make migrations. Exiting..."

@@ -6,7 +6,7 @@ sh ./migrations.sh
 echo "Migrations Shell Script has run successfully."
 
 echo "Running Services Integration Tests..."
-python ./tests/integration_tests.py
+python -m pytest ./tests/integration_tests.py
 if [$? -ne 0]; then
 echo "Failed to Start Celery Beat Worker. Exiting..."
 exit 1;
@@ -14,7 +14,7 @@ fi
 echo "Run Successfully."
 
 echo "Running Module Tests..."
-python ./tests/module_tests.py
+python -m pytest ./tests/module_tests.py
 if [$? -ne 0]; then
 echo "Failed to Start Celery Beat Worker. Exiting..."
 exit 1;

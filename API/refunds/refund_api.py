@@ -17,21 +17,13 @@ class Refund(object):
     def __init__(self, charge_id):
         self.charge_id = charge_id
 
-    @classmethod
-    def check_payment_valid(cls, payment_identifier):
-        try:
-            stripe.PaymentIntent.retrieve(api_key=settings.STRIPE_API_KEY,
-            client_secret=settings.STRIPE_API_SECRET, id=payment_identifier)
-        except(stripe.error.InvalidRequestError,):
-            raise NotImplementedError
-
     @staticmethod
     async def create_refund(charge_id):
         try:
             return stripe.Refund.create(api_key=getattr(settings, 'STRIPE_API_SECRET'),
             charge=charge_id).id
 
-        except(stripe.error.InvalidRequestError,) as api_exception:
+        except(stripe.error.InvalidRequestError, TypeError) as api_exception:
             logger.error('[REFUND CREATE EXCEPTION]: %s' % api_exception)
             exception = api_exceptions.RefundFailed(reason=api_exception.args)
             raise exception
@@ -44,7 +36,7 @@ class Refund(object):
             await models.Refund.objects.create(refund_id=refund_id)
             await models.Payment.objects.delete(payment_intent_id=self.charge_id)
 
-        except(stripe.error.InvalidRequestError,) as exception:
+        except(stripe.error.InvalidRequestError, TypeError, AttributeError) as exception:
             logger.debug('Refund Failed.')
             raise api_exceptions.RefundFailed(
                 reason=getattr(exception, 'reason')
@@ -61,10 +53,10 @@ async def make_refund(request: fastapi.Request, csrf_protect: fastapi_csrf_prote
         return fastapi.HTTPException(
             status_code=404, detail='No Such Payment Found.'
         )
-    except(api_exceptions.RefundFailed, ) as exception:
+    except(api_exceptions.RefundFailed) as exception:
         raise exception
 
-    except(api_exceptions.PaymentNotFound, ):
+    except(api_exceptions.PaymentNotFound, KeyError):
         return fastapi.HTTPException(status_code=404)
 
 

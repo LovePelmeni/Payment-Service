@@ -1,7 +1,11 @@
 from __future__ import annotations
 import fastapi_csrf_protect.exceptions, json
 import typing, json
-from API import exceptions as api_exceptions, settings, models
+
+import ormar.exceptions
+
+from API.exceptions import exceptions as api_exceptions
+from API import settings, models
 from API.settings import application
 import pydantic, stripe.error, logging, fastapi, datetime
 from fastapi_csrf_protect import CsrfProtect
@@ -15,12 +19,11 @@ class PaymentValidationForm(pydantic.BaseModel):
 
     subscription_id: int
     purchaser_id: int
+    amount: int
+    currency: typing.Literal["usd", "eur", "rub"]
 
-class PaymentSessionController(object):
-
-
-    def create_payment_session(self, customer, subscription) -> stripe.checkout.Session:
-        return stripe.checkout.Session.create(
+def create_payment_session(customer, subscription) -> stripe.checkout.Session:
+    return stripe.checkout.Session.create(
 
             api_key=getattr(settings, 'STRIPE_API_SECRET'),
             success_url=settings.SUCCESS_SESSION_URL,
@@ -36,40 +39,41 @@ class PaymentSessionController(object):
                 "purchaser_id": customer.id,
                 "date": datetime.datetime.now(),
             },
-            customer=customer,
-            mode="payment",
+            customer=customer.stripe_customer_id,
+            mode="subscription",
             after_expiration=None)
 
-    @application.post(path='/payment/session/', response_class=fastapi.responses.JSONResponse)
-    async def start_payment_session(self, request: fastapi.Request, csrf_protect: CsrfProtect = fastapi.Depends()):
-        """
-        / * Creates Payment Session for the Subscription and returns
-        """
-        try:
-            csrf_protect.validate_csrf_in_cookies(request=request) if csrf_protect is not None else None
-            subscription = await models.Subscription.objects.get(
-            id=request.query_params.get('subscription_id'))
+@application.post(path='/payment/session/', response_class=fastapi.responses.JSONResponse)
+async def start_payment_session(request: fastapi.Request, csrf_protect: CsrfProtect = fastapi.Depends()):
+    """
+    / * Creates Payment Session for the Subscription and returns
+    """
+    try:
+        csrf_protect.validate_csrf_in_cookies(request=request) if csrf_protect is not None else None
+        subscription = await models.Subscription.objects.get(
+        id=int(request.query_params.get('subscription_id')))
 
-            customer = await models.StripeCustomer.objects.get(
-            id=int(request.query_params.get('customer_id')))
-            session = self.create_payment_session(customer=customer, subscription=subscription)
+        customer = await models.StripeCustomer.objects.get(
+        id=int(request.query_params.get('customer_id')))
+        session = create_payment_session(customer=customer, subscription=subscription)
 
-            return fastapi.responses.JSONResponse(content={'session': session},
-            headers={'Content-Type': 'application/json'})
+        return fastapi.responses.JSONResponse(content={'session_id': session.get('id')},
+        headers={'Content-Type': 'application/json'}, status_code=201)
 
-        except(stripe.error.InvalidRequestError, AssertionError, KeyError, AttributeError) as exception:
-            logger.debug('[PAYMENT SESSION EXCEPTION]: %s' % exception)
-            raise api_exceptions.PaymentSessionFailed(reason=exception.args)
+    except(stripe.error.InvalidRequestError, AssertionError, KeyError, AttributeError, TypeError) as exception:
+        logger.debug('[PAYMENT SESSION EXCEPTION]: %s' % exception)
+        raise api_exceptions.PaymentSessionFailed(reason=exception.args)
+
+    except(ormar.exceptions.NoMatch):
+        return fastapi.HTTPException(status_code=404)
 
 
-class PaymentIntentController(object):
+def create_payment_intent(purchaser: models.StripeCustomer, payment_object: PaymentValidationForm) -> dict:
 
-    def create_payment_intent(self, purchaser: models.StripeCustomer, payment_object: PaymentValidationForm) -> dict:
-
-        try:
-            intent = stripe.PaymentIntent.create(
+    try:
+        intent = stripe.PaymentIntent.create(
                 api_key=settings.STRIPE_API_SECRET,
-                amount=self.amount,
+                amount=payment_object.dict().get('amount'),
 
                 payment_method_types=['card'],
                 currency=payment_object.dict().get('currency'),
@@ -80,30 +84,26 @@ class PaymentIntentController(object):
                 metadata={
                     'subscription_id': payment_object.dict().get('subscription_id'),
                     'payment_amount': payment_object.dict().get('amount'),
-                    'purchaser_id': self.purchaser.id
+                    'purchaser_id': purchaser.id
                 },
             )
-            intent.update['metadata'].update({'payment_intent_id': intent.get('client_secret')})
-            return {'payment_intent_id': intent.get('client_secret'), 'payment_id': intent.id}
-        except(stripe.error.InvalidRequestError, KeyError, AttributeError) as exception:
-            raise exception
+        intent.metadata.update({'payment_intent_id': intent.get('client_secret')})
+        return {'payment_intent_id': intent.get('client_secret'), 'payment_id': intent.id}
+    except(stripe.error.InvalidRequestError, KeyError, AttributeError, TypeError) as exception:
+        raise exception
 
 
-    @application.post(path='/payment/intent/', response_class=fastapi.responses.JSONResponse) # amount, subscription_id
-    async def get_payment_intent(self, request: fastapi.Request, payment_credentials: str = fastapi.Form(), csrf_protect: CsrfProtect = fastapi.Depends()):
+@application.post(path='/payment/intent/', response_class=fastapi.responses.JSONResponse) # amount, subscription_id
+async def get_payment_intent(request: fastapi.Request, payment_credentials: str = fastapi.Form(), csrf_protect: CsrfProtect = fastapi.Depends()):
         try:
-
             customer = await models.StripeCustomer.objects.get(id=int(request.query_params.get('customer_id')))
             csrf_protect.validate_csrf_in_cookies(request=request) if csrf_protect is not None else None
 
-            payment = self.create_payment_intent(
+            intent_secret = create_payment_intent(
             payment_object=PaymentValidationForm(**json.loads(payment_credentials)), purchaser=customer)
-
-            intent_secret = payment.get_payment_intent()
             return fastapi.responses.JSONResponse(intent_secret, status_code=200)
 
-        except(pydantic.ValidationError, stripe.error.InvalidRequestError, AttributeError, KeyError) as exception:
-
+        except(pydantic.ValidationError, stripe.error.InvalidRequestError, AttributeError, KeyError, TypeError) as exception:
             logger.error('[PAYMENT INTENT EXCEPTION]: %s' % exception)
             return fastapi.HTTPException(status_code=400, detail='Invalid Credentials.')
 

@@ -19,8 +19,7 @@ For this project I'm using framework FastAPI as a Main Framework with following 
 
 #Deployment 
 
-For Deployment process I've chosen Docker. 
-
+For Deployment process I've chosen Docker.
 
 #Usage
 

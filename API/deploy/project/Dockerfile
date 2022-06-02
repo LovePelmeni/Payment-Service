@@ -12,5 +12,3 @@ COPY . .
 ENTRYPOINT ["sh", "./entrypoint.sh"]
 
 
-
-

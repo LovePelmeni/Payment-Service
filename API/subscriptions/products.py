@@ -31,7 +31,7 @@ class SubscriptionProduct(object):
                     'recurring': {'interval': 'month'}
                 },
             )
-        except(stripe.error.InvalidRequestError):
+        except(stripe.error.InvalidRequestError, AttributeError, KeyError, TypeError):
             raise NotImplementedError
 
 
@@ -39,7 +39,7 @@ class SubscriptionProduct(object):
         try:
             stripe.Product.retrieve(
             id=self.subscription.product_id).delete()
-        except(stripe.error.StripeError):
+        except(stripe.error.StripeError,):
             raise NotImplementedError
 
 
