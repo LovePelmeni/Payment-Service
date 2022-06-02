@@ -5,7 +5,7 @@ from fastapi.security.utils import cs
 from API import settings
 from API import models
 
-client = fastapi.testclient.TestClient(app=application)
+client = fastapi.testclient.TestClient(app=settings.application)
 
 class TestWebhookEndpoint(pytest.Class):
 
@@ -33,7 +33,7 @@ class PaymentTestCase(pytest.Class):
     def setup(self) -> None:
         import requests
         self.payment_document = {}
-        self.client = requests.Session()
+        self.client = client
         self.client.headers.update({'CSRF-Token': fastapi_csrf_protect.CsrfProtect(
         ).generate_csrf(secret_key=settings.get_csrf_configuration().secret_key)})
 
@@ -58,7 +58,7 @@ class RefundTestCase(pytest.Class):
         import requests
         self.payment_secret = stripe.PaymentIntent.create(api_key=getattr(settings, 'STRIPE_API_KEY'),
         client_secret=settings.STRIPE_API_SECRET).get('client_secret')
-        self.client = requests.Session()
+        self.client = client
 
     @pytest.fixture(scope='module')
     def test_create_refund(self):
@@ -73,7 +73,7 @@ class StripeCustomerTestCase(pytest.Class):
     def setup(self) -> None:
         self.customer_id = models.StripeCustomer.objects.create(username='TestCustomer').id
         self.customer_data = {}
-        self.client = requests.Session()
+        self.client = client
 
     @pytest.fixture(scope='module')
     def test_create_stripe_customer(self):
@@ -89,4 +89,6 @@ class StripeCustomerTestCase(pytest.Class):
         response = self.client.delete('http://localhost:8081/customer/delete/?user_id=%s' % self.customer_id)
         assert response.status_code == 200
         assert len(models.StripeCustomer.objects.all()) == 1
+
+
 

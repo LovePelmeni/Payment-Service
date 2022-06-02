@@ -1,5 +1,10 @@
 #!/bin/sh
 
+echo "Running Migrations Shell Script..."
+sh chmod +x ./migrations.sh
+sh ./migrations.sh
+echo "Migrations Shell Script has run successfully."
+
 echo "Running Services Integration Tests..."
 python ./tests/integration_tests.py
 if [$? -ne 0]; then
@@ -32,7 +37,7 @@ exit 1;
 fi
 
 echo "starting Payment Webhook Service.."
-stripe listen --forward-to 0.0.0.0:8081/webhook/payment/ &
+stripe listen --forward-to 0.0.0.0:8081/webhook/payment/ --events payment_intent.succeeded &
 if [$? -ne 0]; then
 echo "Failed to Start Celery Beat Worker. Exiting..."
 exit 1;
