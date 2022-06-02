@@ -1,59 +1,59 @@
 import fastapi
-class InvalidPaymentCredentials(BaseException):
+class InvalidPaymentCredentials(Exception):
 
     def __init__(self, invalid_credentials: dict):
         self.invalid_credentials = invalid_credentials
 
-class PaymentValidationError(BaseException):
+class PaymentValidationError(Exception):
 
     def __init__(self, invalid_credentials=None):
         self.invalid_credentials = invalid_credentials
 
-class InvalidPaymentResponse(BaseException):
+class InvalidPaymentResponse(Exception):
 
     def __init__(self, invalid_credentials=None):
         self.invalid_data = invalid_credentials
 
-class PaymentNotFound(BaseException):
+class PaymentNotFound(Exception):
 
     def __call__(self, **kwargs):
         return fastapi.HTTPException(status_code=404)
 
 
-class PaymentFailed(BaseException):
+class PaymentFailed(Exception):
 
     def __init__(self, reason):
         self.reason = reason
 
-class PaymentSessionFailed(BaseException):
+class PaymentSessionFailed(Exception):
 
     def __init__(self, reason):
         self.reason = reason
 
 
-class RefundFailed(BaseException):
+class RefundFailed(Exception):
 
     def __init__(self, reason):
         self.reason = reason
 
-class RefundNotFound(BaseException):
+class RefundNotFound(Exception):
 
     def __call__(self, **kwargs):
         return fastapi.HTTPException(status_code=404)
 
 
-class CustomerCreationFailed(BaseException):
+class CustomerCreationFailed(Exception):
 
     def __init__(self, reason):
         self.reason = reason
 
 
-class UserNotFound(BaseException):
+class UserNotFound(Exception):
 
     def __call__(self, **kwargs):
         return fastapi.HTTPException(status_code=404)
 
-class UserDeletionFailed(BaseException):
+class UserDeletionFailed(Exception):
 
     def __init__(self, reason):
         self.reason = reason

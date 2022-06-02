@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 
-@models.database.transaction(force_rollback=True)
+@settings.database.transaction(force_rollback=True)
 @application.post('/customer/create/')
 async def create_customer(request: fastapi.Request, csrf_protect: fastapi_csrf_protect.CsrfProtect = None):
     try:
@@ -35,7 +35,7 @@ async def create_customer(request: fastapi.Request, csrf_protect: fastapi_csrf_p
 
 
 
-@models.database.transaction(force_rollback=True)
+@settings.database.transaction(force_rollback=True)
 @application.delete('/customer/delete/')
 async def delete_customer(request: fastapi.Request, csrf_protect: fastapi_csrf_protect.CsrfProtect = None):
     try:

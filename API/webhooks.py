@@ -8,15 +8,22 @@ import stripe.error, logging
 logger = logging.getLogger(__name__)
 
 async def process_success_transaction(paymentCredentials: dict):
+    """
+    / * Saves transaction to database...
+    """
     try:
-        payment = await models.Payment.objects.create(payment_intent_id=paymentCredentials['metadata']['payment_intent'])
+        payment = await models.Payment.objects.create(
+        **paymentCredentials['data']['object']['metadata'],
+        payment_intent_id=paymentCredentials['data']['object']['client_secret'],
+        charge_id=paymentCredentials['data']['object']['charges']['data'][0]['id'] # charge ID
+        )
         await payment.purchaser.create(models.StripeCustomer.objects.get(
         stripe_customer_id=paymentCredentials.get('customer')))
     except(KeyError):
         raise NotImplementedError
 
 
-@models.database.transaction(force_rollback=True)
+@settings.database.transaction(force_rollback=True)
 @application.post(path='/webhook/payment/')
 async def webhook_controller(request: fastapi.Request):
     try:
@@ -38,7 +45,5 @@ async def webhook_controller(request: fastapi.Request):
     except(stripe.error.SignatureVerificationError, ValueError, NotImplementedError) as signature_exception:
         logger.error('[SIGNATURE_WEBHOOK_ERROR]: %s' % signature_exception)
         return fastapi.responses.Response(status_code=500)
-
-
 
 

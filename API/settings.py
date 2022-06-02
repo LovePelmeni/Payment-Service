@@ -12,6 +12,7 @@ DEBUG = True
 application = fastapi.FastAPI(debug=DEBUG)
 
 if not DEBUG:
+
     FRONTEND_APPLICATION_SERVICE_HOST = os.environ.get('FRONTEND_APPLICATION_SERVICE_HOST')
     SONG_APPLICATION_SERVICE_HOST = os.environ.get('SONG_APPLICATION_SERVICE_HOST')
     SUBSCRIPTION_SERVICE_HOST = os.environ.get('SUBSCRIPTION_SERVICE_HOST')
@@ -53,8 +54,6 @@ application.state.database = database
 
 SUCCESS_SESSION_URL = 'http://%s:8000/healthcheck/'
 CANCEL_SESSION_URL = 'http://%s:8081/healthcheck/'
-
-
 
 class CSRFSettings(pydantic.BaseModel):
     secret_key: str = 'payment_secret_key'

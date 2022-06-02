@@ -4,7 +4,7 @@ import ormar.exceptions
 from API import settings, models
 import stripe, logging, fastapi
 
-from API import exceptions as api_exceptions
+from API.exceptions import exceptions as api_exceptions
 from API.settings import application
 import stripe.error
 
@@ -14,18 +14,8 @@ logger = logging.getLogger(__name__)
 
 class Refund(object):
 
-    def __init__(self, payment_secret):
-        self.payment_secret = payment_secret
-
-    def __new__(cls, **kwargs):
-        try:
-            assert kwargs.get('payment_secret') is not None
-            payment_identifier = kwargs.get('payment_secret')
-            cls.check_payment_valid(payment_identifier=payment_identifier)
-            return super().__new__(**kwargs)
-
-        except(NotImplementedError, AssertionError):
-            raise api_exceptions.PaymentNotFound()
+    def __init__(self, charge_id):
+        self.charge_id = charge_id
 
     @classmethod
     def check_payment_valid(cls, payment_identifier):
@@ -36,10 +26,10 @@ class Refund(object):
             raise NotImplementedError
 
     @staticmethod
-    async def create_refund(payment_secret):
+    async def create_refund(charge_id):
         try:
             return stripe.Refund.create(api_key=getattr(settings, 'STRIPE_API_SECRET'),
-            payment_secret=payment_secret).get('id')
+            charge=charge_id).id
 
         except(stripe.error.InvalidRequestError,) as api_exception:
             logger.error('[REFUND CREATE EXCEPTION]: %s' % api_exception)
@@ -47,12 +37,12 @@ class Refund(object):
             raise exception
 
 
-    @models.database.transaction(force_rollback=True)
+    @settings.database.transaction(force_rollback=True)
     async def create(self):
         try:
-            refund_id = await self.create_refund(payment_secret=self.payment_secret)
+            refund_id = await self.create_refund(charge_id=self.charge_id)
             await models.Refund.objects.create(refund_id=refund_id)
-            await models.Payment.objects.delete(payment_id=self.payment_secret)
+            await models.Payment.objects.delete(payment_intent_id=self.charge_id)
 
         except(stripe.error.InvalidRequestError,) as exception:
             logger.debug('Refund Failed.')
@@ -64,7 +54,7 @@ class Refund(object):
 async def make_refund(request: fastapi.Request, csrf_protect: fastapi_csrf_protect.CsrfProtect = Depends()):
     try:
         csrf_protect.validate_csrf_in_cookies(request=request)
-        refund = await Refund(payment_secret=request.query_params.get('payment_secret')).create()
+        refund = await Refund(charge_id=request.query_params.get('charge_id')).create()
         return fastapi.responses.JsonResponse({'refund': refund})
 
     except(ormar.exceptions.NoMatch,):

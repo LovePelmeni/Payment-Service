@@ -19,7 +19,7 @@ class PaymentValidationForm(pydantic.BaseModel):
 class PaymentSessionController(object):
 
 
-    def create_payment_session(self, customer, subscription):
+    def create_payment_session(self, customer, subscription) -> stripe.checkout.Session:
         return stripe.checkout.Session.create(
 
             api_key=getattr(settings, 'STRIPE_API_SECRET'),
@@ -40,8 +40,11 @@ class PaymentSessionController(object):
             mode="payment",
             after_expiration=None)
 
-    @application.post(path='/payment/session/')
+    @application.post(path='/payment/session/', response_class=fastapi.responses.JSONResponse)
     async def start_payment_session(self, request: fastapi.Request, csrf_protect: CsrfProtect = fastapi.Depends()):
+        """
+        / * Creates Payment Session for the Subscription and returns
+        """
         try:
             csrf_protect.validate_csrf_in_cookies(request=request) if csrf_protect is not None else None
             subscription = await models.Subscription.objects.get(
@@ -50,7 +53,6 @@ class PaymentSessionController(object):
             customer = await models.StripeCustomer.objects.get(
             id=int(request.query_params.get('customer_id')))
             session = self.create_payment_session(customer=customer, subscription=subscription)
-
 
             return fastapi.responses.JSONResponse(content={'session': session},
             headers={'Content-Type': 'application/json'})
@@ -62,9 +64,7 @@ class PaymentSessionController(object):
 
 class PaymentIntentController(object):
 
-
-
-    def create_payment_intent(self, purchaser: models.StripeCustomer, payment_object: PaymentValidationForm):
+    def create_payment_intent(self, purchaser: models.StripeCustomer, payment_object: PaymentValidationForm) -> dict:
 
         try:
             intent = stripe.PaymentIntent.create(
@@ -83,14 +83,13 @@ class PaymentIntentController(object):
                     'purchaser_id': self.purchaser.id
                 },
             )
-            intent['metadata']['payment_intent_id'] = intent.get('client_secret')
+            intent.update['metadata'].update({'payment_intent_id': intent.get('client_secret')})
             return {'payment_intent_id': intent.get('client_secret'), 'payment_id': intent.id}
         except(stripe.error.InvalidRequestError, KeyError, AttributeError) as exception:
             raise exception
 
 
-
-    @application.post(path='/payment/intent/') # amount, subscription_id
+    @application.post(path='/payment/intent/', response_class=fastapi.responses.JSONResponse) # amount, subscription_id
     async def get_payment_intent(self, request: fastapi.Request, payment_credentials: str = fastapi.Form(), csrf_protect: CsrfProtect = fastapi.Depends()):
         try:
 
@@ -114,6 +113,7 @@ class PaymentIntentController(object):
         except(stripe.error.PermissionError) as exception:
             logger.error('Looks Like Stripe Token is Expired, or try to use secret if you have not still')
             raise exception
+
 
 
 

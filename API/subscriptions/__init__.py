@@ -1,4 +1,4 @@
 try:
-    import API, prices, products
+    import API, products, subscriptions
 except(ImportError,):
-    from . import products, prices
+    from . import products, subscriptions
