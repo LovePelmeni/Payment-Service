@@ -1,4 +1,5 @@
 FROM python:3.8.13-buster
+MAINTAINER Klimushin Kirill email: kirklimushin@gmail.com
 
 WORKDIR payment/app/
 RUN pip install --upgrade pip
@@ -10,5 +11,4 @@ RUN pip install -r production_requirements.txt
 
 COPY . .
 ENTRYPOINT ["sh", "./entrypoint.sh"]
-
 

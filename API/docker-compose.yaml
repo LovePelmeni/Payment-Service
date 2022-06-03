@@ -17,11 +17,9 @@ services:
   payment_app:
 
     container_name: payment_app
-    build: .
+    build: ../../project/.
     env_file:
-      - ./project/payment_application.env
-    environment:
-      - DATABASE_URL=psql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      - ../payment_application.env
     ports:
       - "8081:8081"
     healthcheck:
@@ -58,6 +56,21 @@ networks:
   payment_app_network:
     external: true
     name: global_project_network
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
