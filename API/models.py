@@ -2,19 +2,27 @@ from __future__ import annotations
 
 import logging
 import typing
+
 import pydantic, sqlalchemy, ormar, databases
 import stripe.error
+
 try:
-    from API import settings
+    from . import settings
     from .subscriptions import products
 except(ModuleNotFoundError, ImportError):
     import settings
+    from subscriptions import products
 
+
+from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy import create_engine
 
 import logging
+
 metadata = sqlalchemy.MetaData()
 logger = logging.getLogger(__name__)
 
+engine = sqlalchemy.create_engine(url=settings.orm_settings.database_url)
 
 class BaseMetaData(ormar.ModelMeta):
 
@@ -32,7 +40,7 @@ async def connect_to_database() -> None:
 @settings.application.on_event('shutdown')
 async def disconnect_from_database() -> None:
     _database = settings.application.state.database
-    if _database.is_disconnected:
+    if _database.is_connected:
         await _database.disconnect()
 
 
@@ -109,6 +117,8 @@ class Payment(ormar.Model):
     subscription = ormar.ForeignKey(to=Subscription, nullable=True)
     amount: int = ormar.Integer(nullable=False)
     purchaser = ormar.ForeignKey(to=StripeCustomer, nullable=False, related_name='payments')
+
+
 
 
 

@@ -1,4 +1,6 @@
 import fastapi
+
+
 class InvalidPaymentCredentials(Exception):
 
     def __init__(self, invalid_credentials: dict):

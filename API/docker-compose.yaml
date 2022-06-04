@@ -2,7 +2,7 @@ version: "3.9"
 services:
 
   nginx:
-
+    restart: unless-stopped
     container_name: nginx_payment_container
     image: nginx:latest
     volumes:
@@ -15,11 +15,10 @@ services:
       - payment_app_network
 
   payment_app:
-
     container_name: payment_app
-    build: ../../project/.
+    build: .
     env_file:
-      - ../payment_application.env
+      - ./payment_application.env
     ports:
       - "8081:8081"
     healthcheck:
@@ -27,13 +26,15 @@ services:
       retries: 5
       interval: 10s
       timeout: 5s
+    command:
+      - --build-arg STRIPE_API_SECRET=${STRIPE_API_SECRET}
     depends_on:
       - payment_postgresql_database
     networks:
       - payment_app_network
 
   payment_postgresql_database:
-
+    restart: unless-stopped
     container_name: postgresql_payment_database
     image: postgres:latest
     environment:
@@ -56,10 +57,6 @@ networks:
   payment_app_network:
     external: true
     name: global_project_network
-
-
-
-
 
 
 

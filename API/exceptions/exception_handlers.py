@@ -52,6 +52,3 @@ def refund_failed_handler(request: fastapi.Request, exception: api_exceptions.Re
         {'error': reason}, status_code=500
     )
 
-
-
-

@@ -15,12 +15,14 @@ logger = logging.getLogger(__name__)
 stripe.api_key = settings.STRIPE_API_SECRET
 
 
+
 class PaymentValidationForm(pydantic.BaseModel):
 
     subscription_id: int
     purchaser_id: int
     amount: int
     currency: typing.Literal["usd", "eur", "rub"]
+
 
 def create_payment_session(customer, subscription) -> stripe.checkout.Session:
     return stripe.checkout.Session.create(
@@ -42,6 +44,7 @@ def create_payment_session(customer, subscription) -> stripe.checkout.Session:
             customer=customer.stripe_customer_id,
             mode="subscription",
             after_expiration=None)
+
 
 @application.post(path='/payment/session/', response_class=fastapi.responses.JSONResponse)
 async def start_payment_session(request: fastapi.Request, csrf_protect: CsrfProtect = fastapi.Depends()):
@@ -83,7 +86,7 @@ def create_payment_intent(purchaser: models.StripeCustomer, payment_object: Paym
 
                 metadata={
                     'subscription_id': payment_object.dict().get('subscription_id'),
-                    'payment_amount': payment_object.dict().get('amount'),
+                    'amount': payment_object.dict().get('amount'),
                     'purchaser_id': purchaser.id
                 },
             )
@@ -91,6 +94,7 @@ def create_payment_intent(purchaser: models.StripeCustomer, payment_object: Paym
         return {'payment_intent_id': intent.get('client_secret'), 'payment_id': intent.id}
     except(stripe.error.InvalidRequestError, KeyError, AttributeError, TypeError) as exception:
         raise exception
+
 
 
 @application.post(path='/payment/intent/', response_class=fastapi.responses.JSONResponse) # amount, subscription_id
@@ -113,7 +117,3 @@ async def get_payment_intent(request: fastapi.Request, payment_credentials: str 
         except(stripe.error.PermissionError) as exception:
             logger.error('Looks Like Stripe Token is Expired, or try to use secret if you have not still')
             raise exception
-
-
-
-

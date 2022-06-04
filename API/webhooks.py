@@ -1,3 +1,4 @@
+import ormar.exceptions
 import stripe, json
 
 from .settings import application
@@ -7,21 +8,27 @@ import stripe.error, logging
 
 logger = logging.getLogger(__name__)
 
+@settings.database.transaction(force_rollback=True)
 async def process_success_transaction(paymentCredentials: dict):
     """
     / * Saves transaction to database...
     """
     try:
-        payment = await models.Payment.objects.create(
-        **paymentCredentials['data']['object']['metadata'],
-        payment_intent_id=paymentCredentials['data']['object']['client_secret'],
-        charge_id=paymentCredentials['data']['object']['charges']['data'][0]['id'] # charge ID
-        )
-        await payment.purchaser.create(models.StripeCustomer.objects.get(
-        stripe_customer_id=paymentCredentials.get('customer')))
-    except(KeyError):
-        raise NotImplementedError
+        payment_payload = paymentCredentials['data']['object']
+        await models.Payment.objects.create(
+        **payment_payload['metadata'],
+        payment_intent_id=payment_payload['client_secret'],
 
+        charge_id=payment_payload['charges']['data'][0]['id'], # charge ID
+        subscription=await models.Subscription.objects.get(
+
+        id=payment_payload['metadata']['subscription_id']),
+        purchaser=await models.StripeCustomer.objects.get(
+        stripe_customer_id=paymentCredentials.get('customer'))
+        )
+
+    except(KeyError, AssertionError,) as exception:
+        raise exception
 
 @settings.database.transaction(force_rollback=True)
 @application.post(path='/webhook/payment/')
@@ -30,7 +37,7 @@ async def webhook_controller(request: fastapi.Request):
         if not 'stripe-signature' in request.headers.keys():
             raise stripe.error.SignatureVerificationError(message='Empty', sig_header=None)
 
-        stripe.Webhook.construct_event(payload=request.body,
+        stripe.Webhook.construct_event(payload=await request.body(),
         sig_header=request.headers.get('stripe-signature'), secret=getattr(settings, 'STRIPE_API_SECRET'))
 
         event = stripe.Event.construct_from(values=json.loads(await request.body()),
@@ -42,8 +49,14 @@ async def webhook_controller(request: fastapi.Request):
             logger.error('[TRANSACTION FAILED]: not valid payment response')
             raise NotImplementedError
 
-    except(stripe.error.SignatureVerificationError, ValueError, NotImplementedError) as signature_exception:
+    except(stripe.error.SignatureVerificationError, ValueError,
+    NotImplementedError, json.JSONDecodeError) as signature_exception:
         logger.error('[SIGNATURE_WEBHOOK_ERROR]: %s' % signature_exception)
         return fastapi.responses.Response(status_code=500)
+
+    except(KeyError, AttributeError, ormar.exceptions.NoMatch):
+        return fastapi.HTTPException(status_code=404)
+
+
 
 
