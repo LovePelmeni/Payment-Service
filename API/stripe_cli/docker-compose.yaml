@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+
+  stripe_cli:
+    container_name: stripe_cli_handler
+    build: .
+    networks:
+      - payment_app_network
+networks:
+  payment_app_network:
+    external: true
+    name: global_project_network

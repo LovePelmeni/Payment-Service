@@ -18,14 +18,16 @@ def generate_csrf_token():
     secret_key='payment_secret_key')
 
 class TestClientMixin:
-    pass
 
-def create_test_client():
+    @pytest.fixture(autouse=True)
+    def client(self, test_client):
+        self.client = test_client
+
+@pytest.fixture(scope='module', autouse=True)
+def test_client():
     with fastapi.testclient.TestClient(app=settings.application) as client_session:
         client_session.headers.update({'fastapi-csrf-token': generate_csrf_token()})
-        setattr(TestClientMixin, 'client', client_session)
-
-create_test_client()
+        yield client_session
 
 
 class TestWebhookEndpoint(TestClientMixin, unittest.TestCase):
@@ -53,13 +55,20 @@ class TestWebhookEndpoint(TestClientMixin, unittest.TestCase):
 
 class PaymentTestCase(TestClientMixin, unittest.TestCase):
 
-
-
     def setUp(self) -> None:
         import requests
         self.payment_session_payload = {}
+
+    @pytest.mark.asyncio
+    async def test_get_payment_intent(self):
+        import requests
+
         self.purchaser = models.StripeCustomer.objects.create()
         self.subscription = models.Subscription.objects.create(
+        subscription_name='SomeSubscription',
+        amount=1000, currency='usd')
+
+        self.subscription = await models.Subscription.objects.create(
         subscription_name='SomeSubscription',
         amount=1000, currency='usd')
         self.payment_intent_payload = {
@@ -72,15 +81,6 @@ class PaymentTestCase(TestClientMixin, unittest.TestCase):
                 "currency": self.subscription.currency
             }
         }
-
-    @pytest.mark.asyncio
-    async def test_get_payment_intent(self):
-        import requests
-
-        self.purchaser = models.StripeCustomer.objects.create()
-        self.subscription = models.Subscription.objects.create(
-        subscription_name='SomeSubscription',
-        amount=1000, currency='usd')
 
         response = self.client.post('http://localhost:8081/get/payment/intent/',
         data=self.payment_intent_payload, timeout=10,
@@ -100,6 +100,14 @@ class PaymentTestCase(TestClientMixin, unittest.TestCase):
         subscription_name='SomeSubscription',
         amount=1000, currency='usd')
 
+        self.payment_session_payload.update({'payment_credentials': {
+                "subscription_name": self.subscription.subscription_name,
+                "subscription_id": self.subscription.id,
+                "purchaser_id": self.purchaser.id,
+                "amount": self.subscription.amount,
+                "currency": self.subscription.currency
+            }})
+
         response = self.client.post('http://localhost:8081/get/payment/intent/',
         data=self.payment_session_payload, timeout=10)
 
@@ -115,11 +123,12 @@ class RefundTestCase(TestClientMixin, unittest.TestCase):
         self.payment_secret = stripe.PaymentIntent.create(
         api_key=getattr(settings, 'STRIPE_API_SECRET'), amount=1000, currency='usd').get('client_secret')
 
-    def test_create_refund(self):
+    @pytest.mark.asyncio
+    async def test_create_refund(self):
         from API import models
         response = self.client.post('http://localhost:8081/refund/payment/?charge_id=%s' % self.payment_secret)
-        assert response.status_code in (200, 201, 500)
-        assert len(models.Refund.objects.all()) == 1
+        assert response.status_code in (200, 201, 500, 404)
+        assert len(await models.Refund.objects.all()) == 1
 
 
 class StripeCustomerTestCase(TestClientMixin, unittest.TestCase):
@@ -129,26 +138,28 @@ class StripeCustomerTestCase(TestClientMixin, unittest.TestCase):
         self.customer_data = {}
         self.customer_id = 1
 
-    def test_create_stripe_customer(self):
+    @pytest.mark.asyncio
+    async def test_create_stripe_customer(self):
         import requests
         response = self.client.post('http://localhost:8081/customer/create/',
         data=self.customer_data, timeout=10)
         assert response.status_code in (200, 201)
-        assert len(models.StripeCustomer.objects.all()) == 2
+        assert len(await models.StripeCustomer.objects.all()) == 2
 
-    def test_delete_stripe_customer(self):
+    @pytest.mark.asyncio
+    async def test_delete_stripe_customer(self):
         import requests
         response = self.client.delete(
         'http://localhost:8081/customer/delete/?user_id=%s' % self.customer_id, timeout=10)
         assert response.status_code in (200, 201, 404)
-        assert len(models.StripeCustomer.objects.all()) in (2, 1)
+        assert len(await models.StripeCustomer.objects.all()) in (2, 1)
 
 
 class SubscriptionTestCase(TestClientMixin, unittest.TestCase):
 
     def setUp(self) -> None:
         self.subscription_data = {
-            "subscription_name": "SomeSub",
+            "subscription_name": "SomeSubscription",
             "amount": 1000,
             "currency": "usd",
             "subscription_id": 1
@@ -156,17 +167,15 @@ class SubscriptionTestCase(TestClientMixin, unittest.TestCase):
 
     def test_create_subscription(self):
         response = self.client.post('http://localhost:8081/subscription/create/',
-        data=self.subscription_data, timeout=10)
+        data={"subscription_data": self.subscription_data}, timeout=10)
         assert response.status_code in (200, 201)
 
     @pytest.mark.asyncio
     async def test_delete_subscription(self):
-        await models.Subscription.objects.create()
+        self.subscription = await models.Subscription.objects.create()
         response = await self.client.delete('http://localhost:8081/subscription/delete/',
-        params={'subscription_id': self.subscription.id}, timeout=10)
+        params={"subscription_id": self.subscription.id}, timeout=10)
         assert response.status_code in (200, 201, 404)
-
-
 
 
 

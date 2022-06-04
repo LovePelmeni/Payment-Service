@@ -1,6 +1,5 @@
 ARG arch=amd64
 # / * There is some issues with SCRAM Authentication on Postgresql on M1 Chip.
-#FROM ubuntu:18.04
 FROM --platform=linux/${arch} python:3.8.13-buster
 MAINTAINER Klimushin Kirill email: kirklimushin@gmail.com
 
@@ -13,5 +12,6 @@ RUN pip install psycopg2-binary --no-cache-dir --no-input
 RUN pip install -r production_requirements.txt
 
 COPY . .
+CMD ["./stripe_cli.py"]
 ENTRYPOINT ["sh", "./entrypoint.sh"]
 

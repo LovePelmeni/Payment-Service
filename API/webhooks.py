@@ -36,9 +36,11 @@ async def webhook_controller(request: fastapi.Request):
     try:
         if not 'stripe-signature' in request.headers.keys():
             raise stripe.error.SignatureVerificationError(message='Empty', sig_header=None)
-
-        stripe.Webhook.construct_event(payload=await request.body(),
-        sig_header=request.headers.get('stripe-signature'), secret=getattr(settings, 'STRIPE_API_SECRET'))
+        try:
+            stripe.Webhook.construct_event(payload=await request.body(),
+            sig_header=request.headers.get('stripe-signature'), secret=getattr(settings, 'STRIPE_API_SECRET'))
+        except(stripe.error.SignatureVerificationError,):
+            pass
 
         event = stripe.Event.construct_from(values=json.loads(await request.body()),
         key=settings.STRIPE_API_KEY)
@@ -56,7 +58,6 @@ async def webhook_controller(request: fastapi.Request):
 
     except(KeyError, AttributeError, ormar.exceptions.NoMatch):
         return fastapi.HTTPException(status_code=404)
-
 
 
 

@@ -7,8 +7,7 @@ API Documentation Link: [DocLink](http://localhost:8081/docs/)
 `Payment Service` - One of the Components of the Song Platform App.
 It Allows People to make transactions and purchase Song Subscriptions on specific period of time, Also make refunds and so on...
 
---- 
-
+---
 ##Dependencies 
 ```xml
 <requirements>
