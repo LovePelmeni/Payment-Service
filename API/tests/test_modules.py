@@ -1,5 +1,8 @@
+import os
+
 import fastapi.testclient
 import fastapi_csrf_protect.exceptions
+
 import pytest, logging, stripe, json, asgiref.sync
 import sqlalchemy, typing, unittest
 
@@ -25,6 +28,7 @@ class TestClientMixin:
 
 @pytest.fixture(scope='module', autouse=True)
 def test_client():
+    os.environ.setdefault(key='TESTING', value='1')
     with fastapi.testclient.TestClient(app=settings.application) as client_session:
         client_session.headers.update({'fastapi-csrf-token': generate_csrf_token()})
         yield client_session
@@ -168,16 +172,28 @@ class SubscriptionTestCase(TestClientMixin, unittest.TestCase):
     def test_create_subscription(self):
         response = self.client.post('http://localhost:8081/subscription/create/',
         data={"subscription_data": self.subscription_data}, timeout=10)
-        assert response.status_code in (200, 201)
+        self.assertIn(response.status_code, (200, 201))
 
     @pytest.mark.asyncio
     async def test_delete_subscription(self):
         self.subscription = await models.Subscription.objects.create()
         response = await self.client.delete('http://localhost:8081/subscription/delete/',
         params={"subscription_id": self.subscription.id}, timeout=10)
-        assert response.status_code in (200, 201, 404)
+        self.assertIn(response.status_code, (200, 201, 404))
 
 
+# class PaymentCheckoutTestCase(TestClientMixin, unittest.TestCase):
+#
+#     @pytest.mark.asyncio
+#     async def test_obtain_checkout_image(self):
+#
+#         purchaser = await models.StripeCustomer.objects.create()
+#         payment = await models.Payment.objects.create(charge_id=None,
+#         payment_intent_id=None, purchaser=purchaser)
+#
+#         response = self.client.get('http://localhost:8081/get/payment/checkout/',
+#         params={'payment_id': payment.id}, timeout=10)
+#         self.assertIsInstance(json.loads(response.text), bytes)
+#         self.assertIn(response.status_code, (200, 201))
 
-
-
+settings.TESTING = False

@@ -55,6 +55,7 @@ class StripeCustomer(ormar.Model):
 
 
 class Subscription(ormar.Model):
+
     class Meta(BaseMetaData):
         tablename = "subscriptions"
 
@@ -117,3 +118,7 @@ class Payment(ormar.Model):
     subscription = ormar.ForeignKey(to=Subscription, nullable=True)
     amount: int = ormar.Integer(nullable=False)
     purchaser = ormar.ForeignKey(to=StripeCustomer, nullable=False, related_name='payments')
+
+
+
+

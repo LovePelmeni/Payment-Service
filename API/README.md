@@ -16,7 +16,7 @@ It Allows People to make transactions and purchase Song Subscriptions on specifi
     
 <postgresql>13.3 or above</postgresql>
     
-<docker>20.0 or above</docker>
+<docker>1.41 or above</docker>
     
 <docker-compose>3.9 or higher</docker-compose>
     
@@ -49,28 +49,32 @@ On
     FROM python:3.8.13-buster
 ```
 
+# Usage
 
 Clone This Repo to your IDE or Whatever.
-
-# Usage
 ```commandline
 
 git clone --branch payment_service git@github.com/LovePelmeni/SongPlatformApp.git
     
 ```
-Go the file in the Main Directory of the Project and run docker-compose.yaml
+Go the file in the Main Directory of the Project and run docker-compose.yaml,
+then run python file responsible for stripe-cli
 
 ```commandline 
    docker-compose up -d 
 ```
 
+```commandline
+   python ./stripe_cli/stripe_cli.py
+```
 
 #Simple Integration.
 ###Using python "requests" library
 ```doctest
    import requests 
+   payment_service_url = 'http://localhost:8081/some-url/'
    session = requests.Session()
-   http_response = session.method(url=url,
+   http_response = session.method(url=payment_service_url,
    headers=headers, params=params, data=data, timeout=timeout)
 ```
 ###Using curl 
