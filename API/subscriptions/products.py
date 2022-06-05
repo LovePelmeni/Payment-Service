@@ -34,13 +34,11 @@ class SubscriptionProduct(object):
         except(stripe.error.InvalidRequestError, AttributeError, KeyError, TypeError):
             raise NotImplementedError
 
-
     def delete_product(self) -> None:
         try:
             stripe.Product.retrieve(
             id=self.subscription.product_id).delete()
         except(stripe.error.StripeError,):
             raise NotImplementedError
-
 
 

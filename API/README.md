@@ -65,7 +65,7 @@ then run python file responsible for stripe-cli
 ```
 
 ```commandline
-   python ./stripe_cli/stripe_cli.py
+   python ./stripe_cli.py
 ```
 
 #Simple Integration.
@@ -77,7 +77,7 @@ then run python file responsible for stripe-cli
    http_response = session.method(url=payment_service_url,
    headers=headers, params=params, data=data, timeout=timeout)
 ```
-###Using curl 
+###Using Curl 
 
 ```commandline
    curl -f http://localhost:8081/healthcheck/
