@@ -117,3 +117,14 @@ async def get_payment_intent(request: fastapi.Request, payment_credentials: str 
         except(stripe.error.PermissionError) as exception:
             logger.error('Looks Like Stripe Token is Expired, or try to use secret if you have not still')
             raise exception
+
+@application.get(path='/get/all/user/payments/')
+async def get_all_payments(request: fastapi.Request):
+    try:
+        queryset = await models.StripeCustomer.objects.filter(
+        id=request.query_params.get('customer_id')).first().select_related('payments')
+        return fastapi.responses.Response(json.dumps({'queryset': queryset}), status_code=200)
+    except(ormar.NoMatch):
+        return fastapi.HTTPException(status_code=404)
+
+    
