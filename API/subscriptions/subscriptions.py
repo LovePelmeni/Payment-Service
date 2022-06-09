@@ -62,4 +62,3 @@ async def delete_subscription(request: fastapi.Request):
 
 
 
-    

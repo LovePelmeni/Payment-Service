@@ -127,4 +127,3 @@ async def get_all_payments(request: fastapi.Request):
     except(ormar.NoMatch):
         return fastapi.HTTPException(status_code=404)
 
-    
