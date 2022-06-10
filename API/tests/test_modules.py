@@ -15,7 +15,7 @@ try:
 except(ImportError, ModuleNotFoundError):
     import settings, models
 
-
+pytest_plugins = ('testdir',)
 def generate_csrf_token():
     return fastapi_csrf_protect.CsrfProtect().generate_csrf(
     secret_key='payment_secret_key')
@@ -38,10 +38,8 @@ def test_client():
 
 class TestModels(TestClientMixin, unittest.TestCase):
 
-    def setUp(self) -> None:
-        pass
 
-    def test_model(self):
+    def test_model(self, testdir):
         for model in [model.__class__.__name__ for model in self.get_models_list()]:
             testdir.makepyfile(
                 """
@@ -226,26 +224,21 @@ class SubscriptionTestCase(TestClientMixin, unittest.TestCase):
         self.assertIn(response.status_code, (200, 201, 404))
 
 
-class RabbitmqDistributedTransactionTestCase(unittest.TestCase):
+class PaymentCheckoutTestCase(TestClientMixin, unittest.TestCase):
 
-    def test_distributed_transaction(self):
-        pass
+    @pytest.mark.asyncio
+    async def test_obtain_checkout_image(self):
 
+        purchaser = await models.StripeCustomer.objects.create()
+        payment = await models.Payment.objects.create(charge_id=None,
+        payment_intent_id=None, purchaser=purchaser)
 
-
-
-# class PaymentCheckoutTestCase(TestClientMixin, unittest.TestCase):
-#
-#     @pytest.mark.asyncio
-#     async def test_obtain_checkout_image(self):
-#
-#         purchaser = await models.StripeCustomer.objects.create()
-#         payment = await models.Payment.objects.create(charge_id=None,
-#         payment_intent_id=None, purchaser=purchaser)
-#
-#         response = self.client.get('http://localhost:8081/get/payment/checkout/',
-#         params={'payment_id': payment.id}, timeout=10)
-#         self.assertIsInstance(json.loads(response.text), bytes)
-#         self.assertIn(response.status_code, (200, 201))
+        response = self.client.get('http://localhost:8081/get/payment/checkout/',
+        params={'payment_id': payment.id}, timeout=10)
+        self.assertIsInstance(json.loads(response.text), str)
+        self.assertIn(response.status_code, (200, 201))
 
 settings.TESTING = False
+
+
+
