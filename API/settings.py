@@ -35,6 +35,9 @@ if not DEBUG:
 
     DATABASE_URL = os.environ.get('DATABASE_URL')
 
+    HTCI_API_USER_ID = os.environ.get('HTCI_API_USER_ID')
+    HTCI_API_KEY = os.environ.get('HTCI_API_TOKEN')
+
 else:
 
     ALLOWED_ORIGINS = ["*"]
@@ -48,6 +51,10 @@ else:
     STRIPE_API_KEY = 'pk_test_51KbRPhBlXqCTWmcHsFZwLrEBFIuQGGmDmXol9YMB66mSmoJM0OKsOcNQC4aPGxJ3xpRrfRMbDxF1GuFrsgUmX59Z006uU7xcuq'
     DATABASE_URL = 'postgresql://postgres:Kirill@localhost:5434/payment_db'
     os.environ.setdefault('DATABASE_URL', DATABASE_URL)
+
+    HTCI_API_USER_ID = '6f88ade3-4ec0-46d0-bd96-bcddbe1b1cd8'
+    HTCI_API_KEY = '31d6ef4e-85ca-4370-b60b-6941a0f523ad'
+
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -72,7 +79,6 @@ class BaseOrmSettings(pydantic.BaseSettings):
     database_url: str = pydantic.Field(env='DATABASE_URL')
 
 orm_settings = BaseOrmSettings()
-
 
 
 

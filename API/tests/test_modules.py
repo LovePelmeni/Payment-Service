@@ -15,7 +15,7 @@ try:
 except(ImportError, ModuleNotFoundError):
     import settings, models
 
-pytest_plugins = ('testdir',)
+
 def generate_csrf_token():
     return fastapi_csrf_protect.CsrfProtect().generate_csrf(
     secret_key='payment_secret_key')
@@ -29,6 +29,10 @@ class TestClientMixin:
     def get_models_list(self):
         return (models.Subscription, models.StripeCustomer, models.Refund, models.Payment)
 
+@pytest.fixture(scope='module')
+def pytester():
+    yield pytest.Pytester
+
 @pytest.fixture(scope='module', autouse=True)
 def test_client():
     os.environ.setdefault(key='TESTING', value='1')
@@ -36,45 +40,6 @@ def test_client():
         client_session.headers.update({'fastapi-csrf-token': generate_csrf_token()})
         yield client_session
 
-class TestModels(TestClientMixin, unittest.TestCase):
-
-
-    def test_model(self, testdir):
-        for model in [model.__class__.__name__ for model in self.get_models_list()]:
-            testdir.makepyfile(
-                """
-                import models, pytest 
-                from django import test 
-                
-                @pytest.fixture(scope='module')
-                def client():
-                    yield test.Client()
-                
-                obj_data = {}
-                update_data = {}
-         
-                @parameterized.parameterized.expand([obj_data])
-                def test_model_create(model_data, client=None):
-                    models.%s.objects.create(**customer_data)
-                    self.assertEquals(len(models.%s.objects.all()), 1)
-                    
-                @parameterized.parameterized.expand([update_data])
-                def test_model_update(updated_data, object, client=None):
-                
-                    for element, value in updated_data.items():
-                        object.__setattr__(**updated_data)
-                        
-                    self.assertEquals(len(models.%s.objects.all()), 1)
-                    self.assertNotEquals(models.%s.objects.get(id=1).
-                
-                @parameterized.parameterized.expand([1])
-                def test_model_delete(obj_id, client=None):
-                    models.%s.objects.delete(id=obj_id)
-                    self.assertLess(len(models.%s.objects.all()), 1)
-                    
-                """ % (model, model. model, model, model, model, model)
-            )
-            assert True
 
 class TestWebhookEndpoint(TestClientMixin, unittest.TestCase):
 
@@ -177,7 +142,7 @@ class RefundTestCase(TestClientMixin, unittest.TestCase):
         assert len(await models.Refund.objects.all()) == 1
 
 
-class StripeCustomerTestCase(TestClientMixin, unittest.FunctionTestCase):
+class StripeCustomerTestCase(TestClientMixin, unittest.TestCase):
 
     def setUp(self) -> None:
 
