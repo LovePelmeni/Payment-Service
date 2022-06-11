@@ -8,7 +8,7 @@ API Documentation Link: [DocLink](http://localhost:8081/docs/)
 It Allows People to make transactions and purchase Subscriptions on specific period of time, Also make refunds and so on...
 
 ---
-##Dependencies 
+## Dependencies 
 ```xml
 <requirements>
     
@@ -25,7 +25,7 @@ It Allows People to make transactions and purchase Subscriptions on specific per
 ```
 
 ---
-##Technologies 
+## Technologies 
 
 For this project I'm using framework FastAPI as a Main Framework with following additions:
 
@@ -38,7 +38,7 @@ For this project I'm using framework FastAPI as a Main Framework with following 
 
 `Docker` & `Docker-Compose`
 
-###Possible Issues related to Deployment
+### Possible Issues related to Deployment
 I was building this API using `MacOS` Operational System on M1 so there probably can be some issues running it on `Windows` (On `Linux` Everything works perfectly).
 
 If You are getting Some Errors, related to Postgresql `SCRAM-Authentication`, try to replace 
@@ -82,7 +82,7 @@ then run python file responsible for stripe-cli
    headers=headers, params=params, data=data, timeout=timeout)
 ```
 
-###Using Curl 
+### Using Curl 
 
 ```commandline
    curl -f http://localhost:8081/healthcheck/
