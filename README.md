@@ -4,11 +4,11 @@ API Documentation Link: [DocLink](http://localhost:8081/docs/)
 
 --- 
 
-`Payment Service` - One of the Components of the Song Platform App.
-It Allows People to make transactions and purchase Song Subscriptions on specific period of time, Also make refunds and so on...
+`Payment Service` - Payment Platform for making payment transaction, interacts via http.
+It Allows People to make transactions and purchase Subscriptions on specific period of time, Also make refunds and so on...
 
 ---
-## Dependencies 
+##Dependencies 
 ```xml
 <requirements>
     
@@ -23,7 +23,9 @@ It Allows People to make transactions and purchase Song Subscriptions on specifi
 </requirements>
 
 ```
-## Technologies 
+
+---
+##Technologies 
 
 For this project I'm using framework FastAPI as a Main Framework with following additions:
 
@@ -31,11 +33,12 @@ For this project I'm using framework FastAPI as a Main Framework with following 
 `Payment Platform` - `Stripe` one of the most popular  .  
 `Database` - `postgresSQL`.
 
-# Deployment 
+---
+#Deployment 
 
 `Docker` & `Docker-Compose`
 
-### Possible Issues related to Deployment
+###Possible Issues related to Deployment
 I was building this API using `MacOS` Operational System on M1 so there probably can be some issues running it on `Windows` (On `Linux` Everything works perfectly).
 
 If You are getting Some Errors, related to Postgresql `SCRAM-Authentication`, try to replace 
@@ -48,15 +51,16 @@ On
 ```dockerfile 
     FROM python:3.8.13-buster
 ```
-
+---
 # Usage
-
 Clone This Repo to your IDE or Whatever.
 ```commandline
 
 git clone --branch payment_service git@github.com/LovePelmeni/SongPlatformApp.git
     
 ```
+---
+
 Go the file in the Main Directory of the Project and run docker-compose.yaml,
 then run python file responsible for stripe-cli
 
@@ -67,8 +71,8 @@ then run python file responsible for stripe-cli
 ```commandline
    python ./stripe_cli.py
 ```
-
-#Simple Integration.
+---
+# Simple Integration.
 ### Using python "requests" library
 ```doctest
    import requests 
@@ -77,11 +81,12 @@ then run python file responsible for stripe-cli
    http_response = session.method(url=payment_service_url,
    headers=headers, params=params, data=data, timeout=timeout)
 ```
-### Using Curl 
+
+###Using Curl 
 
 ```commandline
    curl -f http://localhost:8081/healthcheck/
 ```
-
+---
 Done! Make Sure all module/integration test has run successfully. 
 ### Go to the Link Above to get more info about API.
