@@ -1,4 +1,4 @@
-# Payment Service 
+# *Payment Service*
 
 API Documentation Link: [DocLink](http://localhost:8081/docs/)
 
@@ -8,7 +8,7 @@ API Documentation Link: [DocLink](http://localhost:8081/docs/)
 It Allows People to make transactions and purchase Subscriptions on specific period of time, Also make refunds and so on...
 
 ---
-## Dependencies 
+## *Dependencies* 
 ```xml
 <requirements>
     
@@ -25,7 +25,7 @@ It Allows People to make transactions and purchase Subscriptions on specific per
 ```
 
 ---
-## Technologies 
+## *Technologies* 
 
 For this project I'm using framework FastAPI as a Main Framework with following additions:
 
@@ -34,7 +34,7 @@ For this project I'm using framework FastAPI as a Main Framework with following 
 `Database` - `postgresSQL`.
 
 ---
-#Deployment 
+# *Deployment* 
 
 `Docker` & `Docker-Compose`
 
@@ -82,12 +82,15 @@ then run python file responsible for stripe-cli
    headers=headers, params=params, data=data, timeout=timeout)
 ```
 
-### Using Curl 
+### *Using Curl*
 
 ```commandline
    curl -f http://localhost:8081/healthcheck/
 ```
 ---
 Done! Make Sure all module/integration test has run successfully. 
-### Go to the Link Above to get more info about API.
+
+## External Links
+
+~ Emails for Contributions : `kirklimushin@gmail.com` & `klimkiruk@gmail.com`
 
