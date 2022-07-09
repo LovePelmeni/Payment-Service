@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package payments;
+
+service PaymentIntent {
+  rpc CreatePaymentIntent(PaymentIntentParams) returns (PaymentIntentResponse);
+}
+
+service PaymentSession {
+  rpc CreatePaymentSession(PaymentSessionParams) returns (PaymentSessionResponse);
+}
+
+service Refund {
+  rpc CreateRefund(RefundParams) returns (RefundResponse);
+}
+
+// Request Params.
+
+message PaymentIntentParams {}
+
+message PaymentSessionParams {}
+
+message RefundParams {}
+
+
+// Response Models
+
+message PaymentSessionResponse {}
+
+message PaymentIntentResponse {}
+
+message RefundResponse {}
+
+

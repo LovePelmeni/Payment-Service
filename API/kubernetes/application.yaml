@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: payment-application-service
+  namespace: payment_namespace
+spec:
+    template:
+      name: payment-application-service
+    selector:
+      matchLabels:
+        app: payment-application-service
+    spec:
+        hostname: payment_application
+        containers:
+          - name: application_server
+            image: crazycoderrr/payment_service
+            envFrom:
+              configMapKeyRef:
+                - name: PaymentConfigMap
+            resources:
+              requests:
+                  cpu: "0.5"
+                  memory: "1Gi"
+              limits:
+                  cpu: "0.5"
+                  memory: "2Gi"
+              ports:
+                - targetPort: 80
+                  port: 8009
+                  protocol: TCP
+
+            livenessProbe:
+              httpGet:
+                path: /healthcheck/
+                port: 8000
+                protocol: HTTP
+
+        dnsPolicy: Default
+        hostNetwork: true
