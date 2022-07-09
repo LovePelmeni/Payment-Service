@@ -17,6 +17,14 @@ except(ImportError, ModuleNotFoundError):
 import logging
 logger = logging.getLogger(__name__)
 
+
+class ProductValidationModel(pyndatic.BaseModel):
+
+    product_name: str
+    product_description: str
+    currency: str
+    price: str
+
 class SubscriptionValidationModel(pydantic.BaseModel):
 
     subscription_name: str

@@ -1,5 +1,4 @@
 syntax = "proto3";
-
 package payments;
 
 service PaymentIntent {
@@ -16,19 +15,36 @@ service Refund {
 
 // Request Params.
 
-message PaymentIntentParams {}
+message PaymentIntentParams {
+  string productId = 1;
+  string purchaserId = 2;
+  string currency = 3;
+  string price = 4;
+}
 
-message PaymentSessionParams {}
+message PaymentSessionParams {
+  string productId = 1;
+  string purchaserId = 2;
+}
 
-message RefundParams {}
+message RefundParams {
+  string paymentId = 1;
+  string purchaserId = 2;
+}
 
 
 // Response Models
 
-message PaymentSessionResponse {}
+message PaymentSessionResponse {
+  string PaymentSessionId = 1;
+}
 
-message PaymentIntentResponse {}
+message PaymentIntentResponse {
+  string PaymentIntentId = 1;
+}
 
-message RefundResponse {}
+message RefundResponse {
+  string RefundId = 1;
+}
 
 

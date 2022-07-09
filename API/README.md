@@ -23,6 +23,8 @@ It Allows People to make transactions and purchase Song Subscriptions on specifi
 </requirements>
 
 ```
+
+---
 ##Technologies 
 
 For this project I'm using framework FastAPI as a Main Framework with following additions:
@@ -31,6 +33,7 @@ For this project I'm using framework FastAPI as a Main Framework with following 
 `Payment Platform` - `Stripe` one of the most popular  .  
 `Database` - `postgresSQL`.
 
+---
 #Deployment 
 
 `Docker` & `Docker-Compose`
@@ -48,15 +51,16 @@ On
 ```dockerfile 
     FROM python:3.8.13-buster
 ```
-
+---
 # Usage
-
 Clone This Repo to your IDE or Whatever.
 ```commandline
 
 git clone --branch payment_service git@github.com/LovePelmeni/SongPlatformApp.git
     
 ```
+---
+
 Go the file in the Main Directory of the Project and run docker-compose.yaml,
 then run python file responsible for stripe-cli
 
@@ -67,9 +71,9 @@ then run python file responsible for stripe-cli
 ```commandline
    python ./stripe_cli.py
 ```
-
-#Simple Integration.
-###Using python "requests" library
+---
+# Simple Integration.
+### Using python "requests" library
 ```doctest
    import requests 
    payment_service_url = 'http://localhost:8081/some-url/'
@@ -77,11 +81,12 @@ then run python file responsible for stripe-cli
    http_response = session.method(url=payment_service_url,
    headers=headers, params=params, data=data, timeout=timeout)
 ```
+
 ###Using Curl 
 
 ```commandline
    curl -f http://localhost:8081/healthcheck/
 ```
-
+---
 Done! Make Sure all module/integration test has run successfully. 
 ### Go to the Link Above to get more info about API.

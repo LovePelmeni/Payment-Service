@@ -7,8 +7,6 @@ import logging
 
 
 pydantic.BaseConfig.arbitrary_types_allowed = True
-
-# logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
 logger = logging.getLogger(__name__)
 
 

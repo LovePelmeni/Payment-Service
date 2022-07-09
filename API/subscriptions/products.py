@@ -1,3 +1,5 @@
+import contextlib
+
 import stripe.error, pydantic
 try:
     from API import settings
@@ -40,5 +42,8 @@ class SubscriptionProduct(object):
             id=self.subscription.product_id).delete()
         except(stripe.error.StripeError,):
             raise NotImplementedError
+
+
+
 
 

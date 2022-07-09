@@ -7,13 +7,13 @@ import ormar.exceptions
 from API.exceptions import exceptions as api_exceptions
 from API import settings, models
 from API.settings import application
+
 import pydantic, stripe.error, logging, fastapi, datetime
 from fastapi_csrf_protect import CsrfProtect
 
 logger = logging.getLogger(__name__)
 
 stripe.api_key = settings.STRIPE_API_SECRET
-
 
 
 class PaymentValidationForm(pydantic.BaseModel):
@@ -27,23 +27,23 @@ class PaymentValidationForm(pydantic.BaseModel):
 def create_payment_session(customer, subscription) -> stripe.checkout.Session:
     return stripe.checkout.Session.create(
 
-            api_key=getattr(settings, 'STRIPE_API_SECRET'),
-            success_url=settings.SUCCESS_SESSION_URL,
-            cancel_url=settings.CANCEL_SESSION_URL,
+        api_key=getattr(settings, 'STRIPE_API_SECRET'),
+        success_url=settings.SUCCESS_SESSION_URL,
+        cancel_url=settings.CANCEL_SESSION_URL,
 
-            line_items=[{
-                "price": stripe.Price.retrieve(api_key=settings.STRIPE_API_SECRET, id=subscription.price_id),
-                "quantity": 1,
-            }],
-            metadata={
-                "subscription_id": subscription.id,
-                "subscription_name": subscription.subscription_name,
-                "purchaser_id": customer.id,
-                "date": datetime.datetime.now(),
-            },
-            customer=customer.stripe_customer_id,
-            mode="subscription",
-            after_expiration=None)
+        line_items=[{
+            "price": stripe.Price.retrieve(api_key=settings.STRIPE_API_SECRET, id=subscription.price_id),
+            "quantity": 1,
+        }],
+        metadata={
+            "subscription_id": subscription.id,
+            "subscription_name": subscription.subscription_name,
+            "purchaser_id": customer.id,
+            "date": datetime.datetime.now(),
+        },
+        customer=customer.stripe_customer_id,
+        mode="subscription",
+        after_expiration=None)
 
 
 @application.post(path='/payment/session/', response_class=fastapi.responses.JSONResponse)
@@ -75,21 +75,21 @@ def create_payment_intent(purchaser: models.StripeCustomer, payment_object: Paym
 
     try:
         intent = stripe.PaymentIntent.create(
-                api_key=settings.STRIPE_API_SECRET,
-                amount=payment_object.dict().get('amount'),
+            api_key=settings.STRIPE_API_SECRET,
+            amount=payment_object.dict().get('amount'),
 
-                payment_method_types=['card'],
-                currency=payment_object.dict().get('currency'),
+            payment_method_types=['card'],
+            currency=payment_object.dict().get('currency'),
 
-                customer=stripe.Customer.retrieve(id=purchaser.stripe_customer_id,
-                api_key=settings.STRIPE_API_SECRET),
+            customer=stripe.Customer.retrieve(id=purchaser.stripe_customer_id,
+            api_key=settings.STRIPE_API_SECRET),
 
-                metadata={
-                    'subscription_id': payment_object.dict().get('subscription_id'),
-                    'amount': payment_object.dict().get('amount'),
-                    'purchaser_id': purchaser.id
-                },
-            )
+            metadata={
+                'subscription_id': payment_object.dict().get('subscription_id'),
+                'amount': payment_object.dict().get('amount'),
+                'purchaser_id': purchaser.id
+            },
+        )
         intent.metadata.update({'payment_intent_id': intent.get('client_secret')})
         return {'payment_intent_id': intent.get('client_secret'), 'payment_id': intent.id}
     except(stripe.error.InvalidRequestError, KeyError, AttributeError, TypeError) as exception:
@@ -126,4 +126,3 @@ async def get_all_payments(request: fastapi.Request):
         return fastapi.responses.Response(json.dumps({'queryset': queryset}), status_code=200)
     except(ormar.NoMatch):
         return fastapi.HTTPException(status_code=404)
-

@@ -39,8 +39,8 @@ async def delete_customer(request: fastapi.Request, csrf_protect: fastapi_csrf_p
         customer_id = int(request.query_params.get('user_id'))
         customer = await models.StripeCustomer.objects.get(id=customer_id)
         stripe_customer_id = customer.stripe_customer_id
-
         await customer.delete()
+
         stripe.Customer.retrieve(api_key=getattr(settings, 'STRIPE_API_SECRET'),
         id=stripe_customer_id).delete(api_key=getattr(settings, 'STRIPE_API_SECRET'),
         params={'customer_id': customer.id})
