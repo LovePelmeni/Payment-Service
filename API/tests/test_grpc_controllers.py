@@ -4,7 +4,9 @@ import unittest.mock
 class GrpcPaymentIntentTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
-        pass
+        self.PaymentCredentials = {}
+        self.Customer = {}
+        self.Product = {}
 
     def getPaymentIntentTestData(self):
         pass

@@ -1,6 +1,8 @@
 syntax = "proto3";
 package payments;
 
+option go_package = "https://github.com/LovePelmeni/Payment-Service/API/grpc/proto";
+
 service PaymentIntent {
   rpc CreatePaymentIntent(PaymentIntentParams) returns (PaymentIntentResponse);
 }

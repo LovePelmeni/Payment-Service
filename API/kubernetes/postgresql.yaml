@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: StatefulSet
+metadata:
+  name: payment_postgres_database
+  namespace: payment_namespace
+spec:
+  template:
+    labels:
+        app: payment_internal_service
+    spec:
+      containers:
+        - name: postgres_database
+          image: postgres:latest
+          envFrom:
+            configMapKeyRef:
+              - name: PostgreConfigMap
+          ports:
+            - containerPort: 5435
+          VolumeMounts:
+            - MountPath: /var/lib/postgresql/data
+              name: PostgresDataVolume
+          command: ["-p", "5435"]
+          livenessProbe:
+            exec:
+              command: ["CMD", "pg_isready", "-f", "$(POSTGRES_DB)"]
+      Volumes:
+        - name: PostgresDataVolume
+          persistentClaim:
+            claimName: PostgresClaim

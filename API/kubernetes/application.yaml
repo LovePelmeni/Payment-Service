@@ -17,6 +17,12 @@ spec:
             envFrom:
               configMapKeyRef:
                 - name: PaymentConfigMap
+            env:
+              - name: STRIPE_API_SECRET
+                value: {{ ./PaymentSecrets/StripeSecrets.STRIPE_API_SECRET }}
+              - name: STRIPE_API_KEY
+                value: {{ ./PaymentSecrets/StripeSecrets.STRIPE_API_TOKEN }}
+
             resources:
               requests:
                   cpu: "0.5"
