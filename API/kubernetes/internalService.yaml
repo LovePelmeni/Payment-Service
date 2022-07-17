@@ -2,13 +2,14 @@ apiVersion: v1
 kind: Service
 metadata:
   name: PaymentService
-  namespace: ingress_namespace
+  namespace: ingress-namespace
 spec:
+  type: LoadBalancer
+  externalIPs:
+    - "192.268.0.10"
   selector:
-    name: payment_internal_service
+    name: payment-internal-service
   ports:
-    - name: payment-nginx-server
-      targetPort: 80
+    - name: payment-application-service
+      targetPort: 8000
       port: 8010
-
-

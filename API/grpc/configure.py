@@ -4,8 +4,9 @@ from . import payments, refunds
 import contextlib, logging
 import futures
 import asgiref.sync
+import os
 
-GrpcPort = os.getenvZ("GRPC_PORT")
+GrpcPort = os.getenv("GRPC_PORT")
 
 logger = logging.getLogger(__name__)
 

@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: StatefulSet
 metadata:
-  name: payment_postgres_database
-  namespace: payment_namespace
+  name: payment-postgres-database
+  namespace: payment-namespace
 spec:
   template:
     labels:
-        app: payment_internal_service
+        app: payment-internal-service
     spec:
       containers:
         - name: postgres_database
@@ -27,3 +27,8 @@ spec:
         - name: PostgresDataVolume
           persistentClaim:
             claimName: PostgresClaim
+
+
+
+
+

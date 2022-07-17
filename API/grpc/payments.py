@@ -1,3 +1,5 @@
+import ormar
+
 from .proto import payment_pb2_grpc, payment_pb2
 try:
     from API.payments import payment_api
@@ -47,7 +49,19 @@ class PaymentIntentController(payment_pb2_grpc.PaymentIntentServicer):
             return payment_pb2_grpc.PaymentIntentResponse({"PaymentIntentId": None})
             # basically returns None (Emtpy String) If Exception Occurs.
 
+class PaymentCheckoutController(object):
 
-
-
-
+    async def CreatePaymentCheckout(self, request, context):
+        try:
+            paymentId = request.query_params.get('PaymentId')
+            payment = await models.Payment.objects.get(id=paymentId)
+            return payment_pb2_grpc.PaymentCheckoutResponse({'PaymentCheckoutInfo': {
+                "PaymentCurrency": payment.currency,
+                "Purchaser": payment.purchaser.username,
+                "Amount": payment.amount,
+                "CreatedAt": datetime.datetime.now(),
+                "ChargeId": payment.charge_id,
+            }})
+        except(ormar.NoMatch, KeyError, AttributeError):
+            logger.debug("Payment Does Not Exist...")
+            return payment_pb2_grpc.PaymentCheckoutResponse({"PaymentCheckoutInfo": None})

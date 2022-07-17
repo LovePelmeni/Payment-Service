@@ -10,7 +10,6 @@ spec:
       matchLabels:
         app: payment-application-service
     spec:
-        hostname: payment_application
         containers:
           - name: application_server
             image: crazycoderrr/payment_service
@@ -19,10 +18,15 @@ spec:
                 - name: PaymentConfigMap
             env:
               - name: STRIPE_API_SECRET
-                value: {{ ./PaymentSecrets/StripeSecrets.STRIPE_API_SECRET }}
+                valueFrom:
+                  secretKeyRef:
+                    - name: project-stripe-secret
+                      value: STRIPE_API_SECRET
               - name: STRIPE_API_KEY
-                value: {{ ./PaymentSecrets/StripeSecrets.STRIPE_API_TOKEN }}
-
+                valueFrom:
+                  secretKeyRef:
+                    - name: project-stripe-secret
+                      value: STRIPE_API_KEY
             resources:
               requests:
                   cpu: "0.5"
@@ -31,15 +35,18 @@ spec:
                   cpu: "0.5"
                   memory: "2Gi"
               ports:
-                - targetPort: 80
-                  port: 8009
+                - name: http
+                  targetPort: 8000
+                  port: 8010
                   protocol: TCP
 
-            livenessProbe:
-              httpGet:
-                path: /healthcheck/
-                port: 8000
-                protocol: HTTP
+                - name: https
+                  targetPort: 8000
+                  port: 8010
 
-        dnsPolicy: Default
-        hostNetwork: true
+            livenessProbe:
+              exec:
+                command: curl -f http://localhost:8000
+
+
+
