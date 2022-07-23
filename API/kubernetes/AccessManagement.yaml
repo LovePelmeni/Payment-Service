@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ServiceAccount
+
+---
+
+apiVersion: v1
+kind: Role
+metadata:
+  name: Payment-Service-Manage-Role
+  namespace: payment-namespace
+
+---
+
+apiVersion: v1
+kind: RoleBinding
+metadata:
+  name: Payment-Service-Manage-Role-Binding
+  namespace: payment-namespace
+spec:

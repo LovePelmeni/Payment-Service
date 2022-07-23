@@ -1,13 +1,28 @@
 apiVersion: v1
+kind: Service
+metadata:
+  name: payment-internal-service
+  namespace: payment-namespace
+spec:
+  selector:
+    labels:
+      app: payment-internal-service
+ports:
+  - name: http
+    targetPort: 8080
+    port: 8080
+    protocol: TCP
+
+---
+
+apiVersion: v1
 kind: Deployment
 metadata:
   name: payment-application-service
-  namespace: payment_namespace
+  namespace: payment-namespace
 spec:
     template:
-      name: payment-application-service
-    selector:
-      matchLabels:
+      labels:
         app: payment-application-service
     spec:
         containers:
@@ -15,7 +30,7 @@ spec:
             image: crazycoderrr/payment_service
             envFrom:
               configMapKeyRef:
-                - name: PaymentConfigMap
+                - name: payment-stripe-config-map
             env:
               - name: STRIPE_API_SECRET
                 valueFrom:
@@ -36,17 +51,61 @@ spec:
                   memory: "2Gi"
               ports:
                 - name: http
-                  targetPort: 8000
-                  port: 8010
+                  targetPort: 8080
+                  port: 8080
                   protocol: TCP
 
                 - name: https
-                  targetPort: 8000
-                  port: 8010
+                  targetPort: 8080
+                  port: 8080
+                  protocol: TCP
 
+            imagePullPolicy: Always
             livenessProbe:
               exec:
                 command: curl -f http://localhost:8000
 
+---
 
+apiVersion: v1
+kind: Secret
+metadata:
+  name: project-stripe-secret
+  namespace: payment-namespace
+type: Opaque
+data:
+  STRIPE_API_SECRET: stripe-api-secret-token
+  STRIPE_API_TOKEN: stripe-api-token
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: PaymentSecret
+
+type: Opaque
+stringData:
+  POSTGRES_DB: payment_db
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: Kirill
+  POSTGRES_HOST: payment_postgresql_database
+  POSTGRES_PORT: 5438
+
+  DATABASE_URL: postgresql://postgres:Kirill@payment_postgresql_database:5438/payment_db
+  DATABASE_HOST: payment_postgresql_database
+  DATABASE_PORT: 5438
+
+  TEST_DATABASE_HOST:  test_payment_database
+  TEST_DATABASE_USER :  postgres
+  TEST_DATABASE_PASSWORD :  Kirill
+  TEST_DATABASE_PORT :  5437
+
+  PAYMENT_APP_HOST: payment_app
+  SONG_APPLICATION_SERVICE_HOST: song_app
+  SUBSCRIPTION_APPLICATION_SERVICE_HOST: sub_app
+  FRONTEND_APPLICATION_SERVICE_HOST: ''
+
+  HTCI_API_KEY: 31d6ef4e-85ca-4370-b60b-6941a0f523ad
+  HTCI_API_USER_ID: 6f88ade3-4ec0-46d0-bd96-bcddbe1b1cd8
 

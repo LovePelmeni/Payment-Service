@@ -1,12 +1,54 @@
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: payment-postgres-persistent-volume
+  namespace: payment-namespace
+spec:
+  StorageClassName: PostgresPaymentVolume
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      cpu: "0.3"
+      memory: "1000Mi"
+    limits:
+      cpu: "0.5"
+      memory: "1000Mi"
+  gcePersistentDisk:
+    size: "10Gi"
+    pgType: ex4
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: payment-postgres-persistent-volume-claim
+  namespace: payment-namespace
+spec:
+  StorageClassName: PostgresPaymentVolume
+  accessModes:
+    - ReadWriteOnlyOnce
+  resources:
+    limits:
+      cpu: "0.5"
+      memory: "1000Mi"
+    requests:
+      cpu: "0.3"
+      memory: "500Mi"
+  gcePersistentDisk:
+    size: "10Gi"
+    pgType: ex4
+
+---
+
+apiVersion: v1
 kind: StatefulSet
 metadata:
   name: payment-postgres-database
   namespace: payment-namespace
 spec:
   template:
-    labels:
-        app: payment-internal-service
     spec:
       containers:
         - name: postgres_database
@@ -19,6 +61,8 @@ spec:
           VolumeMounts:
             - MountPath: /var/lib/postgresql/data
               name: PostgresDataVolume
+
+          imagePullPolicy: IfNotPresent
           command: ["-p", "5435"]
           livenessProbe:
             exec:
@@ -26,7 +70,7 @@ spec:
       Volumes:
         - name: PostgresDataVolume
           persistentClaim:
-            claimName: PostgresClaim
+            claimName: payment-postgres-persistent-volume-claim
 
 
 

@@ -1,0 +1,51 @@
+pipeline {
+    agent any
+    environment {
+        DOCKERHUB_CREDENTIALS=credentials("DockerHub")
+        APPLICATION_HOST=localhost
+        APPLICATION_PORT=8000
+    }
+    stages {
+        stage("build") {
+            // Building Application...
+            sh "echo 'Building Initial Application Image...'"
+            dir("test_env"){
+                sh "docker-compose up -d"
+            }
+            sh "'built, running Test Environment'"
+        }
+        stage("testing"){
+            // Running Test Environment...
+
+           post {
+             always {
+                  sh "echo 'Removing Test environment...'"
+                  sh "docker-compose down"
+                  sh "echo 'Removed... Deploying Application Image...'"
+                }
+            }
+        }
+        stage("deployment"){
+            // Deploying Local Image into Dockerhub
+            withCredentials([usernamePassword(
+                credentialsId: "DockerHub",
+                usernameVariable: DOCKERHUB_CREDENTIALS_USR,
+                passwordVariable: DOCKERHUB_CREDENTIALS_PSW,
+            )]){
+                sh "echo 'Logging Into Account'"
+                sh "docker login -u ${env.DOCKERHUB_CREDENTIALS_USR} -p ${env.DOCKERHUB_CREDENTIALS_PSW}"
+                sh "echo 'Logged Into DockerHub, Tagging Image...'"
+                sh "docker tag test_env_test_payment_application crazycoderrr/payment_service"
+                sh "echo 'Pushing into DockerHub Repo...'"
+                sh "docker push crazycoderrr/payment_service"
+                sh "echo 'Pushed...'"
+            }
+            post{
+                always{
+                    sh "echo 'Logging out of Dockerhub Account...'"
+                    sh "docker logout"
+                }
+            }
+        }
+    }
+}

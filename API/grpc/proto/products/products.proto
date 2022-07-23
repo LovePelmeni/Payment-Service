@@ -1,0 +1,42 @@
+syntax = "proto3";
+package products;
+
+service Product {
+  rpc CreateProduct(ProductParams) returns (ProductResponse);
+  rpc UpdateProduct(ProductUpdateParams) returns (ProductResponse);
+  rpc DeleteProduct(ProductDeleteParams) returns (ProductResponse);
+}
+
+message OwnerCredentials {
+  string CustomerUsername = 1;
+  string CustomerEmail = 2;
+  string CustomerId = 3;
+}
+
+message ProductParams {
+  string ProductName = 1;
+  string ProductDescription = 2;
+  repeated string OwnerCredentials = 3;
+  string ProductPrice = 4;
+  string Currency = 5;
+}
+
+message ProductUpdateParams {
+  optional string ProductName = 1;
+  optional string ProductDescription = 2;
+  optional string ProductPrice = 3;
+  optional string Currency = 4;
+}
+
+message ProductDeleteParams {
+  string ProductId = 1;
+}
+
+enum OperationStatus {
+  SUCCESS = 0;
+  FAILURE = 1;
+}
+
+message ProductResponse {
+  OperationStatus Status = 1;
+}

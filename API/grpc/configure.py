@@ -44,5 +44,4 @@ class GrpcServer(object):
         server.add_insecure_port(":%s" % GrpcPort)
         yield server
 
-
 server = GrpcServer(host=GrpcHost, port=GrpcPort)
