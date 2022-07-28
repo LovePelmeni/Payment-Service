@@ -4,6 +4,7 @@ metadata:
   name: payment-internal-service
   namespace: payment-namespace
 spec:
+  type: ClusterIP
   selector:
     labels:
       app: payment-internal-service
@@ -25,6 +26,7 @@ spec:
       labels:
         app: payment-application-service
     spec:
+        terminationGracePeriodSeconds: 60
         containers:
           - name: application_server
             image: crazycoderrr/payment_service
@@ -42,28 +44,13 @@ spec:
                   secretKeyRef:
                     - name: project-stripe-secret
                       value: STRIPE_API_KEY
-            resources:
-              requests:
-                  cpu: "0.5"
-                  memory: "1Gi"
-              limits:
-                  cpu: "0.5"
-                  memory: "2Gi"
               ports:
                 - name: http
                   targetPort: 8080
                   port: 8080
                   protocol: TCP
 
-                - name: https
-                  targetPort: 8080
-                  port: 8080
-                  protocol: TCP
-
             imagePullPolicy: Always
-            livenessProbe:
-              exec:
-                command: curl -f http://localhost:8000
 
 ---
 

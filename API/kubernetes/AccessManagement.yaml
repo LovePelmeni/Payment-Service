@@ -1,19 +1,33 @@
 apiVersion: v1
 kind: ServiceAccount
+metadata:
+  name: payment-service-account-user
+  namespace: payment-namespace
 
 ---
 
-apiVersion: v1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: Payment-Service-Manage-Role
+  name: payment-service-role
   namespace: payment-namespace
+rules:
+  - apiGroups: ["", "extensions", "apps"]
+    verbs: ["get", "list", "watch", "edit", "create", "delete"]
+    subjects: ["deployments", "pods", "services", "statefulsets"]
 
 ---
 
 apiVersion: v1
 kind: RoleBinding
 metadata:
-  name: Payment-Service-Manage-Role-Binding
+  name: payment-service-role-binding
   namespace: payment-namespace
-spec:
+roleRef:
+  apiGroup: rbac.authorization.k8s.io/v1
+  name: payment-service-role
+  namespace: payment-namespace
+subjects:
+  kind: User
+  name: payment-service-account-user
+  namespace: payment-namespace

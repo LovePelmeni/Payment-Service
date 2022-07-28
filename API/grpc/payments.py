@@ -14,17 +14,12 @@ class PaymentSessionController(payment_pb2_grpc.PaymentSessionServicer):
 
     async def CreatePaymentSession(self, request, context):
         try:
-            paymentSessionCredentials = payment_api.PaymentValidationForm(
-            **request.data)
-
-            customer = await models.StripeCustomer.objects.get(
-            id=paymentSessionCredentials.dict().get("CustomerId"))
-            subscription = await models.Subscription.objects.get(
-            id=paymentSessionCredentials.dict().get("SubscriptionId"))
-
-            SessionKey = payment_api.create_payment_session(
-            customer=customer, subscription=subscription)
-            return payment_pb2_grpc.PaymentSessionResponse({"SessionKey": SessionKey})
+            paymentSessionCredentials = payment_api.PaymentValidationForm(**request.data)
+            paymentSessionInitializer = payment_api.PaymentSessionInitializer(paymentSessionCredentials)
+            SessionKey = paymentSessionInitializer.create_payment_session()
+            return payment_pb2_grpc.PaymentSessionResponse(
+            {"SessionKey": SessionKey}
+            )
         except(pydantic.ValidationError, ormar.NoMatch) as val_err:
 
             logger.debug("Invalid Payment Session Credentials. %s" % val_err)
@@ -36,18 +31,21 @@ class PaymentIntentController(payment_pb2_grpc.PaymentIntentServicer):
 
     async def CreatePaymentIntent(self, request, context):
         try:
-            paymentCredentials = payment_api.PaymentValidationForm(**request.data)
-            customer = await models.StripeCustomer.objects.get(
-            id=paymentCredentials.get("CustomerId"))
-            PaymentIntentId = payment_api.create_payment_intent(purchaser=customer,
-            payment_object=paymentCredentials)
-            return payment_pb2.PaymentIntentResponse({"PaymentIntentId": PaymentIntentId})
+            paymentSessionCredentialsId = request.query_params.get("paymentSessionId")
+            paymentIntentInitializer = payment_api.PaymentIntentInitializer(paymentSessionCredentialsId)
+
+            PaymentIntentCredentials = paymentIntentInitializer.create_payment_intent()
+            return payment_pb2.PaymentIntentResponse(
+                {"PaymentIntentSecretId": PaymentIntentCredentials["payment_intent_secret"],
+                 "PaymentId": PaymentIntentCredentials["payment_id"]}
+            )
 
         except(ormar.NoMatch, pydantic.ValidationError) as exception:
 
             logger.debug("Exception Occurred While Processing Payment Intent Form: %s" % exception)
-            return payment_pb2_grpc.PaymentIntentResponse({"PaymentIntentId": None})
+            return payment_pb2_grpc.PaymentIntentResponse({"PaymentIntentId": None, "PaymentId": None})
             # basically returns None (Emtpy String) If Exception Occurs.
+
 
 class PaymentCheckoutController(object):
 

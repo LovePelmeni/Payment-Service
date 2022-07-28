@@ -1,0 +1,22 @@
+syntax = "proto3";
+package customers;
+
+// Package requires Validation....
+
+import "google/protobuf/descriptor/proto";
+
+extend google.protobuf.FieldOptions {
+  string validator = 1;
+}
+
+service CustomerService {
+  rpc CreateCustomer(CreateCustomerParams) returns (CustomerResponse);
+  rpc UpdateCustomer(UpdateCustomerParams) returns (CustomerResponse);
+  rpc DeleteCustomer(DeleteCustomerParams) returns (CustomerResponse);
+}
+
+message CreateCustomerParams {
+  string CustomerUsername = 1;
+  string CustomerEmail = 2;
+}
+
