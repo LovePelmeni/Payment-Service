@@ -1,12 +1,13 @@
 import grpc
-from .proto import payment_pb2_grpc, payment_pb2
+from .proto.payments import payment_pb2_grpc
 from . import payments, refunds
 import contextlib, logging
 import futures
 import asgiref.sync
 import os
 
-GrpcPort = os.getenv("GRPC_PORT")
+GrpcPort = os.getenv("PAYMENT_GRPC_SERVER_PORT")
+GrpcHost = os.getenv("PAYMENT_GRPC_SERVER_HOST")
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,8 @@ class GrpcServer(object):
     @contextlib.contextmanager
     def runGrpcServer(self):
         server = grpc.server(thread_pool=futures.ThreadPoolExecutor(max_workers=10))
-        server.add_insecure_port(":%s" % GrpcPort)
+        server.add_insecure_port("%s:%s" % (GrpcHost, GrpcPort))
         yield server
 
 server = GrpcServer(host=GrpcHost, port=GrpcPort)
+

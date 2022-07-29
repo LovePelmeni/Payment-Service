@@ -1,22 +1,47 @@
 syntax = "proto3";
 package customers;
 
-// Package requires Validation....
+import "github.com/mwitkow/go-validators/validators.proto";
+import "google/api/annotations.proto";
 
-import "google/protobuf/descriptor/proto";
 
-extend google.protobuf.FieldOptions {
-  string validator = 1;
+service Customer {
+    rpc CreateCustomer(CustomerCreateRequest) returns (CustomerResponse) {
+        option (google.api.http) = {
+            post: "/create/customer/"
+            body: "createCredentials"
+        };
+    };
+    rpc DeleteCustomer(CustomerDeleteRequest) returns (CustomerResponse){
+        option (google.api.http) = {
+            delete: "/delete/customer/"
+            body: "deleteCredentials"
+        };
+    };
+};
+
+message CustomerCreateRequest {
+    CustomerCreateRequestBody createCredentials = 1;
 }
 
-service CustomerService {
-  rpc CreateCustomer(CreateCustomerParams) returns (CustomerResponse);
-  rpc UpdateCustomer(UpdateCustomerParams) returns (CustomerResponse);
-  rpc DeleteCustomer(DeleteCustomerParams) returns (CustomerResponse);
+message CustomerCreateRequestBody {
+    string Username = 1 [(validator.field) = {regex: "^[a-zA-z0-9]{1,100}$"}];
+    string Email = 2 [(validator.field) = {regex: "^[a-z0-9](.?[a-z0-9]){5,}@g(oogle)?mail.com$"}];
 }
 
-message CreateCustomerParams {
-  string CustomerUsername = 1;
-  string CustomerEmail = 2;
+message CustomerDeleteRequest {
+    CustomerDeleteRequestBody deleteCredentials = 1;
 }
 
+message CustomerDeleteRequestBody {
+    int64 customerId = 1;
+}
+
+enum Status {
+    SUCCESS = 0;
+    FAILED = 1;
+}
+
+message CustomerResponse {
+    Status Status = 1;
+}

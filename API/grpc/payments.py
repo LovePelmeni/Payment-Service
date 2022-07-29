@@ -1,6 +1,6 @@
 import ormar
+from .proto.payments import payment_pb2, payment_pb2_grpc
 
-from .proto import payment_pb2_grpc, payment_pb2
 try:
     from API.payments import payment_api
     from API import models
@@ -14,7 +14,8 @@ class PaymentSessionController(payment_pb2_grpc.PaymentSessionServicer):
 
     async def CreatePaymentSession(self, request, context):
         try:
-            paymentSessionCredentials = payment_api.PaymentValidationForm(**request.data)
+            Data = request.data.get("paymentSessionCredentials")
+            paymentSessionCredentials = payment_api.PaymentValidationForm(**Data)
             paymentSessionInitializer = payment_api.PaymentSessionInitializer(paymentSessionCredentials)
             SessionKey = paymentSessionInitializer.create_payment_session()
             return payment_pb2_grpc.PaymentSessionResponse(
@@ -29,9 +30,9 @@ class PaymentSessionController(payment_pb2_grpc.PaymentSessionServicer):
 
 class PaymentIntentController(payment_pb2_grpc.PaymentIntentServicer):
 
-    async def CreatePaymentIntent(self, request, context):
+    async def CreatePaymentIntent(self, request, context, insecure=True):
         try:
-            paymentSessionCredentialsId = request.query_params.get("paymentSessionId")
+            paymentSessionCredentialsId = request.data.get("paymentIntentCredentials")
             paymentIntentInitializer = payment_api.PaymentIntentInitializer(paymentSessionCredentialsId)
 
             PaymentIntentCredentials = paymentIntentInitializer.create_payment_intent()
@@ -51,7 +52,7 @@ class PaymentCheckoutController(object):
 
     async def CreatePaymentCheckout(self, request, context):
         try:
-            paymentId = request.query_params.get('PaymentId')
+            paymentId = request.data.get('paymentCheckoutCredentials')
             payment = await models.Payment.objects.get(id=paymentId)
             return payment_pb2_grpc.PaymentCheckoutResponse({'PaymentCheckoutInfo': {
                 "PaymentCurrency": payment.currency,

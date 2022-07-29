@@ -12,7 +12,6 @@ RUN pip install psycopg2-binary --no-cache-dir --no-input
 RUN pip install -r production_requirements.txt
 
 COPY . .
-
 RUN chmod +x ./API/entrypoint.sh
 ENTRYPOINT ["sh", "./API/entrypoint.sh"]
 

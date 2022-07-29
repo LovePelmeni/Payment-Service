@@ -6,13 +6,12 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    labels:
       app: payment-internal-service
-ports:
-  - name: http
-    targetPort: 8080
-    port: 8080
-    protocol: TCP
+  ports:
+    - name: http
+      targetPort: 8080
+      port: 8080
+      protocol: TCP
 
 ---
 
@@ -22,37 +21,54 @@ metadata:
   name: payment-application-service
   namespace: payment-namespace
 spec:
-    template:
+  selector:
+    matchLabels:
+      app: payment-internal-service
+  template:
+    metadata:
       labels:
-        app: payment-application-service
+        app: payment-intenal-service
     spec:
-        terminationGracePeriodSeconds: 60
-        containers:
-          - name: application_server
-            image: crazycoderrr/payment_service
-            envFrom:
-              configMapKeyRef:
-                - name: payment-stripe-config-map
-            env:
-              - name: STRIPE_API_SECRET
-                valueFrom:
-                  secretKeyRef:
-                    - name: project-stripe-secret
-                      value: STRIPE_API_SECRET
-              - name: STRIPE_API_KEY
-                valueFrom:
-                  secretKeyRef:
-                    - name: project-stripe-secret
-                      value: STRIPE_API_KEY
-              ports:
-                - name: http
-                  targetPort: 8080
-                  port: 8080
-                  protocol: TCP
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: application-server
+          image: crazycoderrr/payment_service
+          envFrom:
+            configMapRef:
+              - name: payment-application-config-map
+          env:
+            - name: STRIPE_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: project-stripe-secret
+                  key: STRIPE_API_SECRET
 
-            imagePullPolicy: Always
+            - name: STRIPE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: project-stripe-secret
+                  key: STRIPE_API_KEY
+            ports:
+              - name: http
+                containerPort: 8080
+                protocol: TCP
+
+          imagePullPolicy: Always
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tls-payment-secret
+  namespace: payment-namespace
+type: kubernetes.io/tls
+data:
+  tls.cert: | 
+# ssl certificate for validating requests coming to the payment service.
+  tls.pem: | 
 
 ---
+
 
 apiVersion: v1
 kind: Secret
@@ -69,30 +85,32 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: PaymentSecret
+  name: payment-application-config-map
 
 type: Opaque
-stringData:
+data:
   POSTGRES_DB: payment_db
-  POSTGRES_USER: postgres
-  POSTGRES_PASSWORD: Kirill
-  POSTGRES_HOST: payment_postgresql_database
-  POSTGRES_PORT: 5438
+  POSTGRES_USER: postgres_user
+  POSTGRES_PASSWORD: postgres_password
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
 
-  DATABASE_URL: postgresql://postgres:Kirill@payment_postgresql_database:5438/payment_db
-  DATABASE_HOST: payment_postgresql_database
-  DATABASE_PORT: 5438
+  DATABASE_URL:  postgresql://postgres:Kirill@postgres:5438/payment_db
+  DATABASE_HOST: postgres
+  DATABASE_PORT: 5432
+  DATABASE_NAME: payment_db
 
-  TEST_DATABASE_HOST:  test_payment_database
+  TEST_DATABASE_HOST:  postgres
   TEST_DATABASE_USER :  postgres
-  TEST_DATABASE_PASSWORD :  Kirill
+  TEST_DATABASE_PASSWORD :  postgres_password
   TEST_DATABASE_PORT :  5437
 
   PAYMENT_APP_HOST: payment_app
   SONG_APPLICATION_SERVICE_HOST: song_app
   SUBSCRIPTION_APPLICATION_SERVICE_HOST: sub_app
-  FRONTEND_APPLICATION_SERVICE_HOST: ''
+  FRONTEND_APPLICATION_SERVICE_HOST: some_host
 
   HTCI_API_KEY: 31d6ef4e-85ca-4370-b60b-6941a0f523ad
   HTCI_API_USER_ID: 6f88ade3-4ec0-46d0-bd96-bcddbe1b1cd8
+
 

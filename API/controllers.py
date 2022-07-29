@@ -3,7 +3,7 @@ import fastapi, fastapi_csrf_protect
 from .settings import application
 
 
-@application.get('/healthcheck/')
+@application.get('/ping/')
 def healthcheck(csrf_protect: fastapi_csrf_protect.CsrfProtect = fastapi.Depends()):
     response = fastapi.responses.Response(status_code=200)
     return response

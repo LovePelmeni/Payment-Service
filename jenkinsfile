@@ -1,27 +1,32 @@
 pipeline {
     agent any
     environment {
-        DOCKERHUB_CREDENTIALS=credentials("DockerHub")
-        APPLICATION_HOST=localhost
-        APPLICATION_PORT=8000
+        DOCKERHUB_CREDENTIALS=credentials("DockerHub") // Dockerhub Credentials
+        ORGANIZATION_EMAIL="kirklimushin@gmail.com"
+        DOCKER_COMPOSE_TEST_ENVIRONMENT_PATH="test_env"
+        APPLICATION_SERVICE_NAME="test_payment_application" // name of the application service that is running in test environment
+        // docker-compose *
     }
+
     stages {
         stage("build") {
             // Building Application...
             sh "echo 'Building Initial Application Image...'"
-            dir("test_env"){
+            dir(env.DOCKER_COMPOSE_TEST_ENVIRONMENT_PATH){
                 sh "docker-compose up -d"
             }
-            sh "'built, running Test Environment'"
+            sh "echo 'built, running Test Environment'"
         }
         stage("testing"){
             // Running Test Environment...
 
            post {
              always {
-                  sh "echo 'Removing Test environment...'"
-                  sh "docker-compose down"
-                  sh "echo 'Removed... Deploying Application Image...'"
+                dir(env.DOCKER_COMPOSE_TEST_ENVIRONMENT_PATH){
+                      sh "echo 'Removing Test environment...'"
+                      sh "docker-compose down"
+                      sh "echo 'Removed... Deploying Application Image...'"
+                    }
                 }
             }
         }
@@ -35,15 +40,22 @@ pipeline {
                 sh "echo 'Logging Into Account'"
                 sh "docker login -u ${env.DOCKERHUB_CREDENTIALS_USR} -p ${env.DOCKERHUB_CREDENTIALS_PSW}"
                 sh "echo 'Logged Into DockerHub, Tagging Image...'"
-                sh "docker tag test_env_test_payment_application crazycoderrr/payment_service"
+
+                fullDockerImageName = sh(script: "
+                ${env.DOCKER_COMPOSE_TEST_ENVIRONMENT_PATH.split("/")[-1]}_${env.APPLICATION_SERVICE_NAME}",
+                returnStdout: true)
+
+                sh "docker tag $fullDockerImageName crazycoderrr/payment_service"
                 sh "echo 'Pushing into DockerHub Repo...'"
                 sh "docker push crazycoderrr/payment_service"
-                sh "echo 'Pushed...'"
+                sh "echo 'New Version Of The Image has been Pushed. Successfully.'"
             }
             post{
                 always{
                     sh "echo 'Logging out of Dockerhub Account...'"
                     sh "docker logout"
+                    emailext: body: "Jenkins Pipeline has been executed. Go Check for Results.",
+                    to: env.ORGANIZATION_EMAIL
                 }
             }
         }

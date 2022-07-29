@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import payment_pb2 as payment__pb2
+from API.grpc.proto.payments import payment_pb2 as payment__pb2
 
 
 class PaymentIntentStub(object):

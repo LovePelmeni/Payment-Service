@@ -1,92 +1,120 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: payment-postgres-persistent-volume
+  name: postgres-database-volume
   namespace: payment-namespace
+  labels:
+    type: local
 spec:
   claimRef:
-    name: payment-postgres-persistent-volume-claim
+    name: postgresql-payment-volume-claim
     namespace: payment-namespace
-  StorageClassName: manual
+
+  hostPath:
+    path: "/mnt/data/"
+
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
   accessModes:
     - ReadWriteOnce
-  capacity:
-    storage: "5Gi"
-  hostPath:
-    path: "mnt/payment/data/"
-
   persistentVolumeReclaimPolicy: Retain
-#  gcePersistentDisk:
-#    size: "10Gi"
-#    pgType: ex4
 
 ---
 
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: payment-postgres-persistent-volume-claim
+  name: postgresql-payment-volume-claim
   namespace: payment-namespace
 spec:
-  StorageClassName: manual
   accessModes:
-    - ReadWriteOnlyOnce
+    - ReadWriteOnce
   resources:
     requests:
-      storage: "3Gi"
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: payment-internal-service
-  namespace: payment-namespace
-spec:
-  ports:
-    - name: http
-      port: 8080
-      targetPort: 8080
-      protocol: TCP
-
----
-
-apiVersion: v1
-kind: StatefulSet
-metadata:
-  name: payment-postgres-database
-  namespace: payment-namespace
-spec:
-  template:
-    spec:
-      containers:
-        - name: postgres_database
-          image: postgres:latest
-          envFrom:
-            secretKeyRef:
-              - name: postgres-secrets
-          ports:
-            - containerPort: 5432
-              protocol: TCP
-          volumeMounts:
-            - mountPath: /var/lib/postgresql/data
-              name: PostgresDataVolume
-
-          imagePullPolicy: IfNotPresent
-      volumes:
-        - name: PostgresDataVolume
-          persistentClaim:
-            claimName: payment-postgres-persistent-volume-claim
+      storage: "1Gi"
 
 ---
 
 apiVersion: v1
 kind: Secret
 metadata:
-  name: postgres-secrets
+  name: postgres-secret
   namespace: payment-namespace
+
+type: Opaque
 stringData:
-    POSTGRES_DB: payment_db
-    POSTGRES_USER: postgres_user
-    POSTGRES_PASSWORD: postgres_password
+  POSTGRES_USER: "postgres_user"
+  POSTGRES_PASSWORD: "postgres_password"
+  POSTGRES_DB: "payment_db"
 
 ---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: payment-namespace
+spec:
+  selector:
+    app: postgres-internal-service
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: payment-postgresql-database
+  namespace: payment-namespace
+spec:
+  serviceName: postgres-internal-service
+  selector:
+    matchLabels:
+      app: postgres-internal-service
+  template:
+    metadata:
+      labels:
+        app: postgres-internal-service
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: postgresql-database
+          image: postgres
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-data-volume
+
+      volumes:
+        - name: postgres-data-volume
+          persistentVolumeClaim:
+            claimName: postgresql-payment-volume-claim
+
+
+

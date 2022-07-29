@@ -6,6 +6,7 @@ import typing
 import pydantic, sqlalchemy, ormar, databases
 import stripe.error
 import stripe
+from API.products import products
 
 try:
     from . import settings
@@ -68,33 +69,25 @@ class Product(ormar.Model):
     owner = ormar.ForeignKey(to=StripeCustomer, nullable=False, related_name="products")
     product_price: str = ormar.String(max_length=10, min_length=4, regex="^[1-9]{1,5}.[0-9]{2}$")
     currency: str = ormar.String(max_length=5, min_length=3, regex="^[A-Z]{3}$")
-    stripe_product_credentials = ormar.JSON() # credentials of the stripe product
+    stripe_product_credentials = ormar.JSON(nullable=True) # credentials of the stripe product
 
 
     @settings.database.transaction
-    def create_instance(self, ProductInfo: ProductInfoValidationForm) -> (bool, Exception):
+    def create_instance(self, ProductInfo: dict, StripeProductInfo: products.StripeProductValidationForm) -> (bool, Exception):
         try:
             productOwner = asgiref.sync.async_to_sync(models.StripeCustomer.objects.get(
-            id=ProductInfo["CustomerId"]))
+            id=ProductInfo["OwnerId"]))
 
-            newProduct = stripe.Product.create(
-                name=ProductInfo.dict()["product_name"],
-                description=ProductInfo.dict()["product_description"],
-                default_price=ProductInfo.dict()["product_price"],
-                images=[
-                    ProductInfo.dict()["product_image_url"],
-                ],
-                api_key=getattr(settings, "STRIPE_API_SECRET")
-            )
-            ProductInfo.dict().update(**{"stripe_product_credentials": {
-                "StripeProductId": newProduct["id"],
-                "StripeProductCreatedAt": newProduct["CreatedAt"],
-                "StripeProductName": newProduct["name"]
-                }
-            })
+            stripeProductValidForm = products.StripeProductValidationForm(**StripeProductInfo.dict())
+            stripeProductInitializer = products.StripeProductController()
+            newProduct = stripeProductInitializer.create_product(stripeProductValidForm)
 
-            localTransaction = asgiref.sync.async_to_sync(models.Product.objects.create(
-            **ProductInfo.dict(), owner=productOwner))
+            localTransaction = asgiref.sync.async_to_sync(models.Product.objects.create)(
+            **ProductInfo.dict(), owner=productOwner,
+            stripe_product_credentials=json.dumps(
+                **newProduct["metadata"]
+            ))
+
             return True, localTransaction
 
         except(ormar.ModelDefinitionError, KeyError, AttributeError) as exception:
@@ -108,12 +101,15 @@ class Product(ormar.Model):
         try:
             models.Product.select_for_update() # Locking Object In order to prevent any operations to it..
             product = asgiref.sync.async_to_sync(
-            models.Product.objects.get(id=ProductId))
+            models.Product.objects)(id=ProductId)
+
+            StripeProductInitializer = products.StripeProductController()
+            StripeProductInitializer.delete_product()
 
             stripe.Product.delete(**json.loads(
             product.stripe_product_credentials), api_key=getattr(settings, "STRIPE_API_SECRET"))
             return True, None
-        except(ormar.exceptions.ModelError, KeyError, AttributeError) as exception:
+        except(ormar.exceptions.ModelError, KeyError, AttributeError, stripe.error.StripeError) as exception:
             logger.info("Failed to Delete Model Instance with Id: %s, Error: %s"
             % ProductId, exception)
             settings.database.transaction.rollback()
@@ -124,7 +120,7 @@ class Product(ormar.Model):
     def update_instance(self, ProductUpdatedData: ProductUpdatedForm, ProductId: str) -> (bool, Exception):
         try:
             stripeProductUpdatedFields: typing.Dict[str, str] = {}
-            product = asgiref.sync.async_to_sync(models.Product.objects.get(id=ProductId))
+            product = asgiref.sync.async_to_sync(models.Product.objects.get)(id=ProductId)
             for Property, Value in ProductUpdatedData.dict().items():
                 setattr(product, Property, Value)
 
@@ -132,59 +128,18 @@ class Product(ormar.Model):
                     stripeProductUpdatedFields[Property] = Value
 
             if len(stripeProductUpdatedFields) != 0:
-                stripe.Product.update(
-                **stripeProductUpdatedFields)
+                initializer = products.StripeProductController()
+                initializer.update_product(stripeProductUpdatedFields)
 
-            asgiref.sync.async_to_sync(product.save())
+            asgiref.sync.async_to_sync(product.save)()
             return True, None
 
-        except(ormar.exceptions.NoMatch, ormar.exceptions.ModelError, KeyError, AttributeError) as exception:
+        except(ormar.exceptions.NoMatch, ormar.exceptions.ModelError,
+        KeyError, AttributeError, stripe.error.StripeError) as exception:
+
             logger.info("Error While Updating Product Instance, %s" % exception)
             settings.database.transaction.rollback()
             return False, exception
-
-
-class Subscription(ormar.Model):
-
-    class Meta(BaseMetaData):
-        tablename = "subscriptions"
-
-    id: int = ormar.Integer(primary_key=True)
-    product_id: str = ormar.String(nullable=True, max_length=100)
-    subscription_name: str = ormar.String(max_length=100, min_length=1, nullable=False)
-
-    price_id: str = ormar.String(nullable=True, max_length=100)
-    amount: int = ormar.Integer(nullable=True)
-    currency: str = ormar.String(nullable=True, max_length=10)
-
-
-    async def apply_stripe_interfaces(self, **options):
-        """
-        / * Creates Product and Price interfaces for the Subscription object.
-        // * It is going to be much easier in the future to maintain it, because of ease and availability of this method.
-        """
-        try:
-            product = products.SubscriptionProduct(subscription=self, **options).create_product()
-            for identifier, value in {'product_id': product.id, 'price_id': product.get('default_price')}.items():
-                self.__setattr__(identifier, value)
-            await self.save()
-
-        except(stripe.error.StripeError, NotImplementedError) as exception:
-            logger.error('could not create product: %s' % exception)
-            raise NotImplementedError
-
-    async def unapply_stripe_interfaces(self):
-        """
-        / * Deletes Product and Price stripe objects before deleting the Model Subscription Object.
-        """
-        try:
-            stripe.Product.retrieve(id=self.product_id, api_key=settings.STRIPE_API_SECRET).update({'active': False})
-            stripe.Price.retrieve(id=self.price_id).update({'active': False})
-
-        except(stripe.error.StripeError, NotImplementedError) as exception:
-            logger.error('could not delete product: %s' % exception)
-            raise NotImplementedError
-
 
 class Refund(ormar.Model):
 
@@ -195,6 +150,9 @@ class Refund(ormar.Model):
     refund_id: str = ormar.String(max_length=100)
     payment_id: str = ormar.Integer(nullable=True)
     purchaser = ormar.ForeignKey(to=StripeCustomer, nullable=True)
+
+    def getRefundInfo(self) -> stripe.Refund:
+        return stripe.Refund.get(key=self.refund_id)
 
 
 class Payment(ormar.Model):
@@ -209,6 +167,10 @@ class Payment(ormar.Model):
     amount: int = ormar.Integer(nullable=False)
     purchaser = ormar.ForeignKey(to=StripeCustomer, nullable=False, related_name='payments')
 
+
+    def getPaymentInfo(self) -> stripe.Charge:
+        charge = stripe.Charge.get(key=self.charge_id)
+        return charge
 
 
 
